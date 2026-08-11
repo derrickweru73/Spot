@@ -366,9 +366,9 @@ class StatCard(tk.Frame):
 
         self.command = command
 
-        # ------------------------------------------------
+        # ================================================
         # Top section
-        # ------------------------------------------------
+        # ================================================
 
         top = tk.Frame(
             self,
@@ -379,14 +379,14 @@ class StatCard(tk.Frame):
             fill='x'
         )
 
-        # ------------------------------------------------
+        # ================================================
         # Icon
-        # ------------------------------------------------
+        # ================================================
 
         icon_canvas = tk.Canvas(
             top,
-            width=38,
-            height=38,
+            width=36,
+            height=36,
             bg=COLORS['card'],
             highlightthickness=0
         )
@@ -398,23 +398,23 @@ class StatCard(tk.Frame):
         icon_canvas.create_oval(
             2,
             2,
-            36,
-            36,
+            34,
+            34,
             fill=color,
             outline=''
         )
 
         icon_canvas.create_text(
-            19,
-            19,
+            18,
+            18,
             text=icon,
             fill=COLORS['text_inverse'],
             font=('Segoe UI', 12, 'bold')
         )
 
-        # ------------------------------------------------
-        # Label
-        # ------------------------------------------------
+        # ================================================
+        # Labels
+        # ================================================
 
         info = tk.Frame(
             top,
@@ -423,7 +423,7 @@ class StatCard(tk.Frame):
 
         info.pack(
             side='left',
-            padx=(11, 0),
+            padx=(10, 0),
             fill='x',
             expand=True
         )
@@ -433,31 +433,27 @@ class StatCard(tk.Frame):
             text=label,
             bg=COLORS['card'],
             fg=COLORS['text_muted'],
-            font=FONTS['small']
+            font=FONTS['small'],
+            anchor='w'
         ).pack(
             anchor='w'
         )
 
-        # ------------------------------------------------
-        # VALUE
-        # ------------------------------------------------
-
-        value_label = tk.Label(
+        tk.Label(
             info,
             text=str(value),
             bg=COLORS['card'],
             fg=COLORS['text'],
-            font=('Segoe UI', 22, 'bold')
-        )
-
-        value_label.pack(
+            font=('Segoe UI', 22, 'bold'),
+            anchor='w'
+        ).pack(
             anchor='w',
             pady=(2, 0)
         )
 
-        # ------------------------------------------------
-        # Click support
-        # ------------------------------------------------
+        # ================================================
+        # Make entire card clickable
+        # ================================================
 
         if command:
 
@@ -466,20 +462,79 @@ class StatCard(tk.Frame):
                 lambda event: command()
             )
 
-            for child in self.winfo_children():
+            self.bind(
+                '<Enter>',
+                self._on_enter
+            )
 
-                child.bind(
-                    '<Button-1>',
-                    lambda event: command()
+            self.bind(
+                '<Leave>',
+                self._on_leave
+            )
+
+            self._bind_children(
+                self,
+                command
+            )
+
+    # ================================================
+    # Bind child widgets
+    # ================================================
+
+    def _bind_children(self, widget, command):
+
+        for child in widget.winfo_children():
+
+            child.bind(
+                '<Button-1>',
+                lambda event: command()
+            )
+
+            if child.winfo_children():
+                self._bind_children(
+                    child,
+                    command
                 )
 
-                for grandchild in child.winfo_children():
+    # ================================================
+    # Hover
+    # ================================================
 
-                    grandchild.bind(
-                        '<Button-1>',
-                        lambda event: command()
+    def _on_enter(self, event=None):
+
+        self._set_background(
+            COLORS['card_hover']
+        )
+
+    def _on_leave(self, event=None):
+
+        self._set_background(
+            COLORS['card']
+        )
+
+    def _set_background(self, color):
+
+        self.configure(
+            bg=color
+        )
+
+        for child in self.winfo_children():
+
+            try:
+                child.configure(
+                    bg=color
+                )
+            except tk.TclError:
+                pass
+
+            for grandchild in child.winfo_children():
+
+                try:
+                    grandchild.configure(
+                        bg=color
                     )
-
+                except tk.TclError:
+                    pass
 # ============================================================
 # Item Row
 # ============================================================

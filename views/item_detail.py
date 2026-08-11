@@ -462,13 +462,13 @@ class ItemDetailWindow(tk.Toplevel):
 
         from views.add_edit import AddEditWindow
 
-        self.destroy()
-
         AddEditWindow(
-            self.controller,
+            self,
             self.controller,
             item_id=self.item_id
         )
+
+        self.destroy()
 
     # ====================================================
     # DELETE
