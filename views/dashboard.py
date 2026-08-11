@@ -8,7 +8,9 @@ from database import get_stats, get_all_items
 
 
 class DashboardView(tk.Frame):
+
     def __init__(self, parent, controller):
+
         super().__init__(
             parent,
             bg=COLORS['bg']
@@ -23,10 +25,6 @@ class DashboardView(tk.Frame):
     # ========================================================
 
     def _build(self):
-
-        # ----------------------------------------------------
-        # Scrollable dashboard
-        # ----------------------------------------------------
 
         self.canvas = tk.Canvas(
             self,
@@ -102,7 +100,7 @@ class DashboardView(tk.Frame):
         header.pack(
             fill='x',
             padx=28,
-            pady=(28, 20)
+            pady=(28, 18)
         )
 
         title_frame = tk.Frame(
@@ -146,15 +144,11 @@ class DashboardView(tk.Frame):
             side='right'
         )
 
-        # ----------------------------------------------------
         # Statistics
-        # ----------------------------------------------------
 
         self._build_stats(content)
 
-        # ----------------------------------------------------
         # Main sections
-        # ----------------------------------------------------
 
         sections = tk.Frame(
             content,
@@ -176,11 +170,6 @@ class DashboardView(tk.Frame):
         sections.grid_columnconfigure(
             1,
             weight=2
-        )
-
-        sections.grid_rowconfigure(
-            0,
-            weight=1
         )
 
         self._build_recent_items(
@@ -210,6 +199,7 @@ class DashboardView(tk.Frame):
         )
 
         for column in range(4):
+
             stats_frame.grid_columnconfigure(
                 column,
                 weight=1
@@ -228,21 +218,30 @@ class DashboardView(tk.Frame):
                 'Available',
                 stats['stored'],
                 COLORS['success'],
-                lambda: self.controller.show_view('stash')
+                lambda:
+                self.controller.show_view(
+                    'stash'
+                )
             ),
             (
                 '↗',
                 'Lent Out',
                 stats['lent'],
                 COLORS['stat_lent'],
-                lambda: self.controller.show_view('lent')
+                lambda:
+                self.controller.show_view(
+                    'lent'
+                )
             ),
             (
                 '↙',
                 'Borrowed',
                 stats['borrowed'],
                 COLORS['stat_borrowed'],
-                lambda: self.controller.show_view('borrowed')
+                lambda:
+                self.controller.show_view(
+                    'borrowed'
+                )
             )
         ]
 
@@ -257,8 +256,10 @@ class DashboardView(tk.Frame):
                 row=0,
                 column=index,
                 sticky='nsew',
-                padx=(0 if index == 0 else 6, 0),
-                pady=0
+                padx=(
+                    0 if index == 0 else 6,
+                    0
+                )
             )
 
     # ========================================================
@@ -306,7 +307,9 @@ class DashboardView(tk.Frame):
             header,
             text="View all",
             command=lambda:
-            self.controller.show_view('stash'),
+            self.controller.show_view(
+                'stash'
+            ),
             bg=COLORS['card'],
             fg=COLORS['primary'],
             activebackground=COLORS['card'],
@@ -407,33 +410,23 @@ class DashboardView(tk.Frame):
 
         overdue = stats['overdue']
 
-        if overdue > 0:
+        badge_color = (
+            COLORS['danger']
+            if overdue > 0
+            else COLORS['success']
+        )
 
-            tk.Label(
-                header,
-                text=str(overdue),
-                bg=COLORS['danger'],
-                fg=COLORS['text_inverse'],
-                font=FONTS['small_bold'],
-                padx=7,
-                pady=2
-            ).pack(
-                side='right'
-            )
-
-        else:
-
-            tk.Label(
-                header,
-                text="0",
-                bg=COLORS['success'],
-                fg=COLORS['text_inverse'],
-                font=FONTS['small_bold'],
-                padx=7,
-                pady=2
-            ).pack(
-                side='right'
-            )
+        tk.Label(
+            header,
+            text=str(overdue),
+            bg=badge_color,
+            fg=COLORS['text_inverse'],
+            font=FONTS['small_bold'],
+            padx=8,
+            pady=2
+        ).pack(
+            side='right'
+        )
 
         reminder_frame = tk.Frame(
             section,
@@ -449,14 +442,15 @@ class DashboardView(tk.Frame):
 
         if overdue:
 
-            overdue_items = self._get_overdue_items()
+            overdue_items = (
+                self._get_overdue_items()
+            )
 
             for item in overdue_items[:5]:
 
                 self._create_reminder(
                     reminder_frame,
-                    item,
-                    overdue=True
+                    item
                 )
 
         else:
@@ -506,13 +500,12 @@ class DashboardView(tk.Frame):
     def _create_reminder(
         self,
         parent,
-        item,
-        overdue=False
+        item
     ):
 
         frame = tk.Frame(
             parent,
-            bg=COLORS['bg'],
+            bg=COLORS['input_bg'],
             highlightbackground=COLORS['border'],
             highlightthickness=1,
             cursor='hand2'
@@ -540,7 +533,7 @@ class DashboardView(tk.Frame):
 
         info = tk.Frame(
             frame,
-            bg=COLORS['bg']
+            bg=COLORS['input_bg']
         )
 
         info.pack(
@@ -553,19 +546,22 @@ class DashboardView(tk.Frame):
         tk.Label(
             info,
             text=item['name'],
-            bg=COLORS['bg'],
+            bg=COLORS['input_bg'],
             fg=COLORS['text'],
             font=FONTS['body_bold']
         ).pack(
             anchor='w'
         )
 
-        person = item.get('person') or 'Unknown'
+        person = (
+            item.get('person')
+            or 'Unknown'
+        )
 
         tk.Label(
             info,
             text=f"With {person}",
-            bg=COLORS['bg'],
+            bg=COLORS['input_bg'],
             fg=COLORS['text_muted'],
             font=FONTS['small']
         ).pack(
@@ -573,12 +569,15 @@ class DashboardView(tk.Frame):
             pady=(2, 0)
         )
 
-        due = item.get('due_date') or ''
+        due = (
+            item.get('due_date')
+            or ''
+        )
 
         tk.Label(
             frame,
             text=due,
-            bg=COLORS['bg'],
+            bg=COLORS['input_bg'],
             fg=COLORS['danger'],
             font=FONTS['small_bold']
         ).pack(
@@ -636,11 +635,13 @@ class DashboardView(tk.Frame):
                 )
 
                 if due < now:
+
                     overdue_items.append(
                         item
                     )
 
             except ValueError:
+
                 continue
 
         return overdue_items
@@ -673,7 +674,10 @@ class DashboardView(tk.Frame):
 
     def refresh(self):
 
-        for widget in self.container.winfo_children():
+        for widget in (
+            self.container.winfo_children()
+        ):
+
             widget.destroy()
 
         self._build_content()
