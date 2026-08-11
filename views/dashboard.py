@@ -356,129 +356,137 @@ class DashboardView(tk.Frame):
 
     def _build_reminders(self, parent):
 
-    section = tk.Frame(
-        parent,
-        bg=COLORS['card'],
-        highlightbackground=COLORS['border'],
-        highlightthickness=1
-    )
+        section = tk.Frame(
+            parent,
+            bg=COLORS['card'],
+            highlightbackground=COLORS['border'],
+            highlightthickness=1
+        )
 
-    section.grid(
-        row=0,
-        column=1,
-        sticky='nsew',
-        padx=(8, 0)
-    )
+        section.grid(
+            row=0,
+            column=1,
+            sticky='nsew',
+            padx=(8, 0)
+        )
 
-    header = tk.Frame(
-        section,
-        bg=COLORS['card']
-    )
-
-    header.pack(
-        fill='x',
-        padx=18,
-        pady=(16, 12)
-    )
-
-    tk.Label(
-        header,
-        text='Reminders',
-        bg=COLORS['card'],
-        fg=COLORS['text'],
-        font=FONTS['heading']
-    ).pack(side='left')
-
-    # Get all items with due dates
-    reminder_items = self._get_reminder_items()
-
-    overdue_count = sum(
-        1 for item in reminder_items
-        if item.get('is_overdue')
-    )
-
-    # Badge shows overdue count
-    badge_color = (
-        COLORS['danger']
-        if overdue_count > 0
-        else COLORS['success']
-    )
-
-    tk.Label(
-        header,
-        text=str(overdue_count),
-        bg=badge_color,
-        fg=COLORS['text_inverse'],
-        font=FONTS['small_bold'],
-        padx=7,
-        pady=2
-    ).pack(side='right')
-
-    reminder_frame = tk.Frame(
-        section,
-        bg=COLORS['card']
-    )
-
-    reminder_frame.pack(
-        fill='both',
-        expand=True,
-        padx=18,
-        pady=(0, 18)
-    )
-
-    if reminder_items:
-
-        for item in reminder_items[:5]:
-
-            self._create_reminder(
-                reminder_frame,
-                item
-            )
-
-    else:
-
-        empty = tk.Frame(
-            reminder_frame,
+        header = tk.Frame(
+            section,
             bg=COLORS['card']
         )
 
-        empty.pack(
-            fill='both',
-            expand=True
+        header.pack(
+            fill='x',
+            padx=18,
+            pady=(16, 12)
         )
 
         tk.Label(
-            empty,
-            text='✓',
-            bg=COLORS['card'],
-            fg=COLORS['success'],
-            font=('Segoe UI', 24, 'bold')
-        ).pack(
-            pady=(35, 5)
-        )
-
-        tk.Label(
-            empty,
-            text="You're all caught up!",
+            header,
+            text='Reminders',
             bg=COLORS['card'],
             fg=COLORS['text'],
-            font=FONTS['body_bold']
-        ).pack()
+            font=FONTS['heading']
+        ).pack(side='left')
+
+        # Get all items with due dates
+        reminder_items = self._get_reminder_items()
+
+        overdue_count = sum(
+            1 for item in reminder_items
+            if item.get('is_overdue')
+        )
+
+        # Badge shows overdue count
+        badge_color = (
+            COLORS['danger']
+            if overdue_count > 0
+            else COLORS['success']
+        )
 
         tk.Label(
-            empty,
-            text='No upcoming due dates.',
-            bg=COLORS['card'],
-            fg=COLORS['text_muted'],
-            font=FONTS['small']
-        ).pack(
-            pady=(3, 0)
+            header,
+            text=str(overdue_count),
+            bg=badge_color,
+            fg=COLORS['text_inverse'],
+            font=FONTS['small_bold'],
+            padx=7,
+            pady=2
+        ).pack(side='right')
+
+        reminder_frame = tk.Frame(
+            section,
+            bg=COLORS['card']
         )
+
+        reminder_frame.pack(
+            fill='both',
+            expand=True,
+            padx=18,
+            pady=(0, 18)
+        )
+
+        if reminder_items:
+
+            for item in reminder_items[:5]:
+
+                self._create_reminder(
+                    reminder_frame,
+                    item
+                )
+
+        else:
+
+            empty = tk.Frame(
+                reminder_frame,
+                bg=COLORS['card']
+            )
+
+            empty.pack(
+                fill='both',
+                expand=True
+            )
+
+            tk.Label(
+                empty,
+                text='✓',
+                bg=COLORS['card'],
+                fg=COLORS['success'],
+                font=('Segoe UI', 24, 'bold')
+            ).pack(
+                pady=(35, 5)
+            )
+
+            tk.Label(
+                empty,
+                text="You're all caught up!",
+                bg=COLORS['card'],
+                fg=COLORS['text'],
+                font=FONTS['body_bold']
+            ).pack()
+
+            tk.Label(
+                empty,
+                text='No upcoming due dates.',
+                bg=COLORS['card'],
+                fg=COLORS['text_muted'],
+                font=FONTS['small']
+            ).pack(
+                pady=(3, 0)
+            )
     # ====================================================
     # REMINDER ITEM
     # ====================================================
 
     def _create_reminder(self, parent, item):
+
+        overdue = item.get('is_overdue', False)
+
+        accent = (
+            COLORS['danger']
+            if overdue
+            else COLORS['primary']
+        )
 
         frame = tk.Frame(
             parent,
@@ -495,8 +503,8 @@ class DashboardView(tk.Frame):
 
         icon = tk.Label(
             frame,
-            text='!',
-            bg=COLORS['danger'],
+            text='!' if overdue else '•',
+            bg=accent,
             fg=COLORS['text_inverse'],
             font=('Segoe UI', 10, 'bold'),
             width=3
@@ -526,9 +534,7 @@ class DashboardView(tk.Frame):
             bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['body_bold']
-        ).pack(
-            anchor='w'
-        )
+        ).pack(anchor='w')
 
         person = item.get('person') or 'Unknown'
 
@@ -545,12 +551,15 @@ class DashboardView(tk.Frame):
 
         due = item.get('due_date') or ''
 
+        due_label = 'Overdue' if overdue else 'Due'
+
         tk.Label(
             frame,
-            text=due,
+            text=f'{due_label}\n{due}',
             bg=COLORS['bg'],
-            fg=COLORS['danger'],
-            font=FONTS['small_bold']
+            fg=accent,
+            font=FONTS['small_bold'],
+            justify='right'
         ).pack(
             side='right',
             padx=10
@@ -574,14 +583,14 @@ class DashboardView(tk.Frame):
     # OVERDUE
     # ====================================================
 
-    def _get_overdue_items(self):
+    def _get_reminder_items(self):
 
         from datetime import datetime
 
         items = get_all_items()
         now = datetime.now()
 
-        overdue_items = []
+        reminders = []
 
         for item in items:
 
@@ -590,6 +599,7 @@ class DashboardView(tk.Frame):
             if not due_date:
                 continue
 
+            # Only lent and borrowed items need reminders
             if item.get('status') not in ('lent', 'borrowed'):
                 continue
 
@@ -597,13 +607,25 @@ class DashboardView(tk.Frame):
 
                 due = datetime.fromisoformat(due_date)
 
-                if due < now:
-                    overdue_items.append(item)
+                item = item.copy()
+
+                # Mark whether this item is overdue
+                item['is_overdue'] = due < now
+
+                reminders.append(item)
 
             except ValueError:
                 continue
 
-        return overdue_items
+        # Overdue first, then upcoming dates
+        reminders.sort(
+            key=lambda item: (
+                not item['is_overdue'],
+                item.get('due_date', '')
+            )
+        )
+
+        return reminders
 
     # ====================================================
     # RESPONSIVE
