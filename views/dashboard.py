@@ -10,19 +10,17 @@ from database import get_stats, get_all_items
 class DashboardView(tk.Frame):
 
     def __init__(self, parent, controller):
-
         super().__init__(
             parent,
             bg=COLORS['bg']
         )
 
         self.controller = controller
-
         self._build()
 
-    # ========================================================
-    # Build Dashboard
-    # ========================================================
+    # ====================================================
+    # BUILD
+    # ====================================================
 
     def _build(self):
 
@@ -45,8 +43,7 @@ class DashboardView(tk.Frame):
 
         self.container.bind(
             '<Configure>',
-            lambda event:
-            self.canvas.configure(
+            lambda event: self.canvas.configure(
                 scrollregion=self.canvas.bbox('all')
             )
         )
@@ -84,13 +81,17 @@ class DashboardView(tk.Frame):
 
         self._build_content()
 
-    # ========================================================
-    # Header
-    # ========================================================
+    # ====================================================
+    # CONTENT
+    # ====================================================
 
     def _build_content(self):
 
         content = self.container
+
+        # ------------------------------------------------
+        # Header
+        # ------------------------------------------------
 
         header = tk.Frame(
             content,
@@ -100,7 +101,7 @@ class DashboardView(tk.Frame):
         header.pack(
             fill='x',
             padx=28,
-            pady=(28, 18)
+            pady=(26, 18)
         )
 
         title_frame = tk.Frame(
@@ -114,7 +115,7 @@ class DashboardView(tk.Frame):
 
         tk.Label(
             title_frame,
-            text="Dashboard",
+            text='Dashboard',
             bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['title']
@@ -124,7 +125,7 @@ class DashboardView(tk.Frame):
 
         tk.Label(
             title_frame,
-            text="Overview of your personal inventory",
+            text='Overview of your personal inventory',
             bg=COLORS['bg'],
             fg=COLORS['text_muted'],
             font=FONTS['small']
@@ -135,7 +136,7 @@ class DashboardView(tk.Frame):
 
         RoundedButton(
             header,
-            text="+ Add Item",
+            text='+ Add Item',
             command=self.controller.open_add,
             bg=COLORS['primary'],
             width=105,
@@ -144,11 +145,15 @@ class DashboardView(tk.Frame):
             side='right'
         )
 
+        # ------------------------------------------------
         # Statistics
+        # ------------------------------------------------
 
         self._build_stats(content)
 
+        # ------------------------------------------------
         # Main sections
+        # ------------------------------------------------
 
         sections = tk.Frame(
             content,
@@ -172,17 +177,12 @@ class DashboardView(tk.Frame):
             weight=2
         )
 
-        self._build_recent_items(
-            sections
-        )
+        self._build_recent_items(sections)
+        self._build_reminders(sections)
 
-        self._build_reminders(
-            sections
-        )
-
-    # ========================================================
-    # Statistics
-    # ========================================================
+    # ====================================================
+    # STATISTICS
+    # ====================================================
 
     def _build_stats(self, parent):
 
@@ -199,7 +199,6 @@ class DashboardView(tk.Frame):
         )
 
         for column in range(4):
-
             stats_frame.grid_columnconfigure(
                 column,
                 weight=1
@@ -218,30 +217,21 @@ class DashboardView(tk.Frame):
                 'Available',
                 stats['stored'],
                 COLORS['success'],
-                lambda:
-                self.controller.show_view(
-                    'stash'
-                )
+                lambda: self.controller.show_view('stash')
             ),
             (
                 '↗',
                 'Lent Out',
                 stats['lent'],
                 COLORS['stat_lent'],
-                lambda:
-                self.controller.show_view(
-                    'lent'
-                )
+                lambda: self.controller.show_view('lent')
             ),
             (
                 '↙',
                 'Borrowed',
                 stats['borrowed'],
                 COLORS['stat_borrowed'],
-                lambda:
-                self.controller.show_view(
-                    'borrowed'
-                )
+                lambda: self.controller.show_view('borrowed')
             )
         ]
 
@@ -262,9 +252,9 @@ class DashboardView(tk.Frame):
                 )
             )
 
-    # ========================================================
-    # Recent Items
-    # ========================================================
+    # ====================================================
+    # RECENT ITEMS
+    # ====================================================
 
     def _build_recent_items(self, parent):
 
@@ -295,7 +285,7 @@ class DashboardView(tk.Frame):
 
         tk.Label(
             header,
-            text="Recent Items",
+            text='Recent Items',
             bg=COLORS['card'],
             fg=COLORS['text'],
             font=FONTS['heading']
@@ -305,11 +295,8 @@ class DashboardView(tk.Frame):
 
         tk.Button(
             header,
-            text="View all",
-            command=lambda:
-            self.controller.show_view(
-                'stash'
-            ),
+            text='View all',
+            command=lambda: self.controller.show_view('stash'),
             bg=COLORS['card'],
             fg=COLORS['primary'],
             activebackground=COLORS['card'],
@@ -322,9 +309,7 @@ class DashboardView(tk.Frame):
             side='right'
         )
 
-        items = get_all_items(
-            limit=5
-        )
+        items = get_all_items(limit=5)
 
         list_frame = tk.Frame(
             section,
@@ -342,7 +327,7 @@ class DashboardView(tk.Frame):
 
             tk.Label(
                 list_frame,
-                text="No items added yet.",
+                text='No items added yet.',
                 bg=COLORS['card'],
                 fg=COLORS['text_muted'],
                 font=FONTS['body']
@@ -365,9 +350,9 @@ class DashboardView(tk.Frame):
                 pady=(0, 6)
             )
 
-    # ========================================================
-    # Reminders
-    # ========================================================
+    # ====================================================
+    # REMINDERS
+    # ====================================================
 
     def _build_reminders(self, parent):
 
@@ -398,7 +383,7 @@ class DashboardView(tk.Frame):
 
         tk.Label(
             header,
-            text="Reminders",
+            text='Reminders',
             bg=COLORS['card'],
             fg=COLORS['text'],
             font=FONTS['heading']
@@ -407,7 +392,6 @@ class DashboardView(tk.Frame):
         )
 
         stats = get_stats()
-
         overdue = stats['overdue']
 
         badge_color = (
@@ -422,7 +406,7 @@ class DashboardView(tk.Frame):
             bg=badge_color,
             fg=COLORS['text_inverse'],
             font=FONTS['small_bold'],
-            padx=8,
+            padx=7,
             pady=2
         ).pack(
             side='right'
@@ -442,9 +426,7 @@ class DashboardView(tk.Frame):
 
         if overdue:
 
-            overdue_items = (
-                self._get_overdue_items()
-            )
+            overdue_items = self._get_overdue_items()
 
             for item in overdue_items[:5]:
 
@@ -467,7 +449,7 @@ class DashboardView(tk.Frame):
 
             tk.Label(
                 empty,
-                text="✓",
+                text='✓',
                 bg=COLORS['card'],
                 fg=COLORS['success'],
                 font=('Segoe UI', 24, 'bold')
@@ -485,7 +467,7 @@ class DashboardView(tk.Frame):
 
             tk.Label(
                 empty,
-                text="No overdue items.",
+                text='No overdue items.',
                 bg=COLORS['card'],
                 fg=COLORS['text_muted'],
                 font=FONTS['small']
@@ -493,19 +475,15 @@ class DashboardView(tk.Frame):
                 pady=(3, 0)
             )
 
-    # ========================================================
-    # Reminder Item
-    # ========================================================
+    # ====================================================
+    # REMINDER ITEM
+    # ====================================================
 
-    def _create_reminder(
-        self,
-        parent,
-        item
-    ):
+    def _create_reminder(self, parent, item):
 
         frame = tk.Frame(
             parent,
-            bg=COLORS['input_bg'],
+            bg=COLORS['bg'],
             highlightbackground=COLORS['border'],
             highlightthickness=1,
             cursor='hand2'
@@ -533,7 +511,7 @@ class DashboardView(tk.Frame):
 
         info = tk.Frame(
             frame,
-            bg=COLORS['input_bg']
+            bg=COLORS['bg']
         )
 
         info.pack(
@@ -546,22 +524,19 @@ class DashboardView(tk.Frame):
         tk.Label(
             info,
             text=item['name'],
-            bg=COLORS['input_bg'],
+            bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['body_bold']
         ).pack(
             anchor='w'
         )
 
-        person = (
-            item.get('person')
-            or 'Unknown'
-        )
+        person = item.get('person') or 'Unknown'
 
         tk.Label(
             info,
-            text=f"With {person}",
-            bg=COLORS['input_bg'],
+            text=f'With {person}',
+            bg=COLORS['bg'],
             fg=COLORS['text_muted'],
             font=FONTS['small']
         ).pack(
@@ -569,15 +544,12 @@ class DashboardView(tk.Frame):
             pady=(2, 0)
         )
 
-        due = (
-            item.get('due_date')
-            or ''
-        )
+        due = item.get('due_date') or ''
 
         tk.Label(
             frame,
             text=due,
-            bg=COLORS['input_bg'],
+            bg=COLORS['bg'],
             fg=COLORS['danger'],
             font=FONTS['small_bold']
         ).pack(
@@ -599,56 +571,44 @@ class DashboardView(tk.Frame):
                 self.controller.open_detail(i)
             )
 
-    # ========================================================
-    # Overdue Items
-    # ========================================================
+    # ====================================================
+    # OVERDUE
+    # ====================================================
 
     def _get_overdue_items(self):
 
         from datetime import datetime
 
         items = get_all_items()
-
         now = datetime.now()
 
         overdue_items = []
 
         for item in items:
 
-            due_date = item.get(
-                'due_date'
-            )
+            due_date = item.get('due_date')
 
             if not due_date:
                 continue
 
-            if item.get('status') not in (
-                'lent',
-                'borrowed'
-            ):
+            if item.get('status') not in ('lent', 'borrowed'):
                 continue
 
             try:
 
-                due = datetime.fromisoformat(
-                    due_date
-                )
+                due = datetime.fromisoformat(due_date)
 
                 if due < now:
-
-                    overdue_items.append(
-                        item
-                    )
+                    overdue_items.append(item)
 
             except ValueError:
-
                 continue
 
         return overdue_items
 
-    # ========================================================
-    # Responsive Canvas
-    # ========================================================
+    # ====================================================
+    # RESPONSIVE
+    # ====================================================
 
     def _resize_container(self, event):
 
@@ -657,9 +617,9 @@ class DashboardView(tk.Frame):
             width=event.width
         )
 
-    # ========================================================
-    # Mouse Wheel
-    # ========================================================
+    # ====================================================
+    # MOUSE WHEEL
+    # ====================================================
 
     def _on_mousewheel(self, event):
 
@@ -668,16 +628,13 @@ class DashboardView(tk.Frame):
             'units'
         )
 
-    # ========================================================
-    # Refresh
-    # ========================================================
+    # ====================================================
+    # REFRESH
+    # ====================================================
 
     def refresh(self):
 
-        for widget in (
-            self.container.winfo_children()
-        ):
-
+        for widget in self.container.winfo_children():
             widget.destroy()
 
         self._build_content()
