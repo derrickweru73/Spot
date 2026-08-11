@@ -1,43 +1,65 @@
-"""Item detail view for Spot."""
+"""Item detail window for Spot."""
 
 import tkinter as tk
 from tkinter import messagebox
 
 from theme import COLORS, FONTS
 from components import RoundedButton, StatusBadge
-from database import get_item, delete_item
+from database import get_item, get_history
 
 
 class ItemDetailWindow(tk.Toplevel):
 
-    def __init__(self, parent, controller, item):
-
+    def __init__(self, parent, controller, item_id):
         super().__init__(parent)
 
         self.controller = controller
-        self.item_id = item['id']
+        self.item_id = item_id
 
-        self.title("Item Details")
-        self.geometry("520x620")
-        self.configure(bg=COLORS['bg'])
-        self.minsize(420, 500)
+        self.item = get_item(item_id)
+
+        if not self.item:
+            messagebox.showerror(
+                "Item Not Found",
+                "This item could not be found.",
+                parent=parent
+            )
+            self.destroy()
+            return
+
+        self.title(
+            f"Spot - {self.item['name']}"
+        )
+
+        self.geometry(
+            "560x650"
+        )
+
+        self.minsize(
+            420,
+            520
+        )
+
+        self.configure(
+            bg=COLORS['bg']
+        )
 
         self.transient(parent)
         self.grab_set()
 
-        self._build(item)
-        self._center()
+        self._build()
+        self.center_window()
 
-    # ====================================================
-    # CENTER WINDOW
-    # ====================================================
+    # ========================================================
+    # Center
+    # ========================================================
 
-    def _center(self):
+    def center_window(self):
 
         self.update_idletasks()
 
-        width = 520
-        height = 620
+        width = 560
+        height = 650
 
         x = (
             self.winfo_screenwidth() // 2
@@ -53,15 +75,52 @@ class ItemDetailWindow(tk.Toplevel):
             f"{width}x{height}+{x}+{y}"
         )
 
-    # ====================================================
-    # BUILD
-    # ====================================================
+    # ========================================================
+    # Build
+    # ========================================================
 
-    def _build(self, item):
+    def _build(self):
 
-        # ------------------------------------------------
-        # Main scrollable area
-        # ------------------------------------------------
+        # ----------------------------------------------------
+        # Header
+        # ----------------------------------------------------
+
+        header = tk.Frame(
+            self,
+            bg=COLORS['bg']
+        )
+
+        header.pack(
+            fill='x',
+            padx=24,
+            pady=(24, 14)
+        )
+
+        tk.Label(
+            header,
+            text="Item Details",
+            bg=COLORS['bg'],
+            fg=COLORS['text'],
+            font=FONTS['title']
+        ).pack(
+            side='left'
+        )
+
+        RoundedButton(
+            header,
+            text="✕",
+            command=self.destroy,
+            bg=COLORS['text_muted'],
+            width=38,
+            height=32,
+            radius=8
+        ).pack(
+            side='right'
+        )
+
+        # ----------------------------------------------------
+        # Scrollable content
+        # ----------------------------------------------------
 
         canvas = tk.Canvas(
             self,
@@ -111,43 +170,19 @@ class ItemDetailWindow(tk.Toplevel):
             side='left',
             fill='both',
             expand=True,
-            padx=12,
-            pady=12
+            padx=(24, 5),
+            pady=(0, 20)
         )
 
         scrollbar.pack(
             side='right',
-            fill='y'
+            fill='y',
+            pady=(0, 20)
         )
 
-        # ------------------------------------------------
-        # Header
-        # ------------------------------------------------
-
-        header = tk.Frame(
-            content,
-            bg=COLORS['bg']
-        )
-
-        header.pack(
-            fill='x',
-            padx=12,
-            pady=(5, 18)
-        )
-
-        tk.Label(
-            header,
-            text="Item Details",
-            bg=COLORS['bg'],
-            fg=COLORS['text'],
-            font=FONTS['title']
-        ).pack(
-            side='left'
-        )
-
-        # ------------------------------------------------
-        # Card
-        # ------------------------------------------------
+        # ----------------------------------------------------
+        # Main card
+        # ----------------------------------------------------
 
         card = tk.Frame(
             content,
@@ -158,12 +193,12 @@ class ItemDetailWindow(tk.Toplevel):
 
         card.pack(
             fill='x',
-            padx=12
+            pady=(0, 12)
         )
 
-        # ------------------------------------------------
+        # ----------------------------------------------------
         # Photo
-        # ------------------------------------------------
+        # ----------------------------------------------------
 
         photo_frame = tk.Frame(
             card,
@@ -172,65 +207,34 @@ class ItemDetailWindow(tk.Toplevel):
 
         photo_frame.pack(
             fill='x',
-            pady=(20, 8)
+            padx=20,
+            pady=(20, 12)
         )
 
-        photo = item.get('photo_path')
+        self._display_photo(
+            photo_frame
+        )
 
-        if photo:
-
-            try:
-
-                from PIL import Image, ImageTk
-
-                image = Image.open(photo)
-                image.thumbnail((150, 150))
-
-                image_tk = ImageTk.PhotoImage(
-                    image
-                )
-
-                image_label = tk.Label(
-                    photo_frame,
-                    image=image_tk,
-                    bg=COLORS['card']
-                )
-
-                image_label.image = image_tk
-
-                image_label.pack()
-
-            except Exception:
-
-                self._photo_placeholder(
-                    photo_frame
-                )
-
-        else:
-
-            self._photo_placeholder(
-                photo_frame
-            )
-
-        # ------------------------------------------------
-        # Item name
-        # ------------------------------------------------
+        # ----------------------------------------------------
+        # Name
+        # ----------------------------------------------------
 
         tk.Label(
             card,
-            text=item['name'],
+            text=self.item['name'],
             bg=COLORS['card'],
             fg=COLORS['text'],
             font=('Segoe UI', 20, 'bold')
         ).pack(
-            pady=(8, 4)
+            anchor='w',
+            padx=20
         )
 
-        # ------------------------------------------------
+        # ----------------------------------------------------
         # Status
-        # ------------------------------------------------
+        # ----------------------------------------------------
 
-        status = item.get(
+        status = self.item.get(
             'status',
             'stored'
         )
@@ -245,14 +249,16 @@ class ItemDetailWindow(tk.Toplevel):
             card,
             status_text,
             width=90,
-            height=24
+            height=26
         ).pack(
-            pady=(0, 18)
+            anchor='w',
+            padx=20,
+            pady=(8, 18)
         )
 
-        # ------------------------------------------------
+        # ----------------------------------------------------
         # Details
-        # ------------------------------------------------
+        # ----------------------------------------------------
 
         details = tk.Frame(
             card,
@@ -261,21 +267,28 @@ class ItemDetailWindow(tk.Toplevel):
 
         details.pack(
             fill='x',
-            padx=22,
+            padx=20,
             pady=(0, 15)
         )
 
         self._detail_row(
             details,
             "Category",
-            item.get('category') or 'General'
+            self.item.get(
+                'category',
+                'General'
+            )
         )
 
-        location = item.get('room') or ''
+        location = self.item.get(
+            'room',
+            ''
+        )
 
-        if item.get('container'):
+        if self.item.get('container'):
             location += (
-                f" → {item['container']}"
+                f" → "
+                f"{self.item['container']}"
             )
 
         self._detail_row(
@@ -284,132 +297,177 @@ class ItemDetailWindow(tk.Toplevel):
             location
         )
 
-        if item.get('person'):
+        if self.item.get('person'):
 
             self._detail_row(
                 details,
                 "Person",
-                item['person']
+                self.item['person']
             )
 
-        if item.get('due_date'):
+        if self.item.get('due_date'):
 
             self._detail_row(
                 details,
                 "Due Date",
-                item['due_date']
+                self.item['due_date']
             )
 
-        if item.get('date_added'):
+        if self.item.get('date_added'):
 
             self._detail_row(
                 details,
                 "Added",
-                item['date_added']
+                self.item['date_added']
             )
 
-        if item.get('tags'):
+        if self.item.get('tags'):
 
             self._detail_row(
                 details,
                 "Tags",
-                item['tags']
+                self.item['tags']
             )
 
-        # ------------------------------------------------
+        # ----------------------------------------------------
         # Notes
-        # ------------------------------------------------
+        # ----------------------------------------------------
 
-        if item.get('notes'):
+        if self.item.get('notes'):
 
             tk.Label(
-                details,
+                card,
                 text="Notes",
                 bg=COLORS['card'],
                 fg=COLORS['text'],
                 font=FONTS['body_bold']
             ).pack(
                 anchor='w',
-                pady=(12, 3)
+                padx=20,
+                pady=(4, 4)
             )
 
             tk.Label(
-                details,
-                text=item['notes'],
+                card,
+                text=self.item['notes'],
                 bg=COLORS['card'],
                 fg=COLORS['text_muted'],
                 font=FONTS['body'],
                 justify='left',
-                wraplength=430
+                wraplength=450
             ).pack(
-                anchor='w'
+                anchor='w',
+                padx=20,
+                pady=(0, 18)
             )
 
-        # ------------------------------------------------
-        # Buttons
-        # ------------------------------------------------
+        # ----------------------------------------------------
+        # Actions
+        # ----------------------------------------------------
 
-        buttons = tk.Frame(
+        actions = tk.Frame(
             content,
             bg=COLORS['bg']
         )
 
-        buttons.pack(
-            pady=18
+        actions.pack(
+            fill='x',
+            pady=(0, 12)
         )
 
         RoundedButton(
-            buttons,
-            text="Edit",
+            actions,
+            text="Edit Item",
             command=self._edit,
             bg=COLORS['primary'],
-            width=100
+            width=110,
+            height=36
         ).pack(
             side='left',
-            padx=5
+            padx=(0, 6)
         )
 
         RoundedButton(
-            buttons,
+            actions,
             text="Delete",
             command=self._delete,
             bg=COLORS['danger'],
-            width=100
+            width=100,
+            height=36
         ).pack(
-            side='left',
-            padx=5
+            side='left'
         )
 
-        RoundedButton(
-            buttons,
-            text="Close",
-            command=self.destroy,
-            bg=COLORS['text_muted'],
-            width=100
-        ).pack(
-            side='left',
-            padx=5
+        # ----------------------------------------------------
+        # History
+        # ----------------------------------------------------
+
+        history = get_history(
+            self.item_id,
+            limit=5
         )
 
-    # ====================================================
-    # PHOTO PLACEHOLDER
-    # ====================================================
+        if history:
 
-    def _photo_placeholder(self, parent):
+            history_card = tk.Frame(
+                content,
+                bg=COLORS['card'],
+                highlightbackground=COLORS['border'],
+                highlightthickness=1
+            )
 
-        tk.Label(
-            parent,
-            text="📷",
-            bg=COLORS['input_bg'],
-            fg=COLORS['text_muted'],
-            font=('Segoe UI', 36),
-            width=5,
-            height=2
-        ).pack()
+            history_card.pack(
+                fill='x'
+            )
 
-    # ====================================================
-    # DETAIL ROW
-    # ====================================================
+            tk.Label(
+                history_card,
+                text="Location History",
+                bg=COLORS['card'],
+                fg=COLORS['text'],
+                font=FONTS['body_bold']
+            ).pack(
+                anchor='w',
+                padx=20,
+                pady=(16, 10)
+            )
+
+            for record in history:
+
+                text = (
+                    f"{record['old_location']}  →  "
+                    f"{record['new_location']}"
+                )
+
+                tk.Label(
+                    history_card,
+                    text=text,
+                    bg=COLORS['card'],
+                    fg=COLORS['text_muted'],
+                    font=FONTS['small'],
+                    wraplength=450,
+                    justify='left'
+                ).pack(
+                    anchor='w',
+                    padx=20,
+                    pady=(0, 3)
+                )
+
+                tk.Label(
+                    history_card,
+                    text=record['changed_at'],
+                    bg=COLORS['card'],
+                    fg=COLORS['text_muted'],
+                    font=('Segoe UI', 8)
+                ).pack(
+                    anchor='w',
+                    padx=20,
+                    pady=(0, 9)
+                )
+
+    # ========================================================
+    # Detail Row
+    # ========================================================
 
     def _detail_row(
         self,
@@ -425,7 +483,7 @@ class ItemDetailWindow(tk.Toplevel):
 
         row.pack(
             fill='x',
-            pady=5
+            pady=4
         )
 
         tk.Label(
@@ -442,53 +500,108 @@ class ItemDetailWindow(tk.Toplevel):
 
         tk.Label(
             row,
-            text=str(value),
+            text=value or '-',
             bg=COLORS['card'],
             fg=COLORS['text'],
             font=FONTS['body'],
             anchor='w',
-            wraplength=330
+            wraplength=360,
+            justify='left'
         ).pack(
             side='left',
             fill='x',
             expand=True
         )
 
-    # ====================================================
-    # EDIT
-    # ====================================================
+    # ========================================================
+    # Photo
+    # ========================================================
+
+    def _display_photo(self, parent):
+
+        path = self.item.get(
+            'photo_path'
+        )
+
+        if not path:
+
+            tk.Label(
+                parent,
+                text="📷",
+                bg=COLORS['card'],
+                fg=COLORS['text_muted'],
+                font=('Segoe UI', 32)
+            ).pack()
+
+            return
+
+        try:
+
+            from PIL import Image, ImageTk
+
+            image = Image.open(path)
+
+            image.thumbnail(
+                (140, 140)
+            )
+
+            photo = ImageTk.PhotoImage(
+                image
+            )
+
+            label = tk.Label(
+                parent,
+                image=photo,
+                bg=COLORS['card']
+            )
+
+            label.image = photo
+
+            label.pack()
+
+        except Exception:
+
+            tk.Label(
+                parent,
+                text="📷",
+                bg=COLORS['card'],
+                fg=COLORS['text_muted'],
+                font=('Segoe UI', 32)
+            ).pack()
+
+    # ========================================================
+    # Edit
+    # ========================================================
 
     def _edit(self):
 
         from views.add_edit import AddEditWindow
 
+        self.destroy()
+
         AddEditWindow(
-            self,
+            self.controller,
             self.controller,
             item_id=self.item_id
         )
 
-        self.destroy()
-
-    # ====================================================
-    # DELETE
-    # ====================================================
+    # ========================================================
+    # Delete
+    # ========================================================
 
     def _delete(self):
 
         answer = messagebox.askyesno(
             "Delete Item",
-            "Are you sure you want to delete this item?",
+            f"Delete '{self.item['name']}'?",
             parent=self
         )
 
         if not answer:
             return
 
-        delete_item(
+        self.controller.delete_item(
             self.item_id
         )
-
-        self.controller.refresh_current_view()
 
         self.destroy()
