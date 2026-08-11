@@ -1,7 +1,8 @@
-"""Spot - App entry point with sidebar navigation and view routing."""
+"""Spot - Responsive desktop inventory application."""
 
 import tkinter as tk
 from tkinter import messagebox, filedialog
+
 from theme import COLORS, FONTS, BREAKPOINTS
 from components import RoundedButton
 from database import delete_item, export_to_csv, get_stats
@@ -10,273 +11,506 @@ from views.dashboard import DashboardView
 from views.stash_view import StashView
 from views.lent_view import LentView
 from views.borrowed_view import BorrowedView
-from views.add_edit import AddEditWindow
 
 
-class SpotApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Spot - Never Lose Your Stuff Again")
-        self.root.geometry("1100x750")
-        self.root.minsize(500, 400)
-        self.root.configure(bg=COLORS['bg'])
+class SpotApp(tk.Tk):
 
-        self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(1, weight=1)
+    def __init__(self):
+        super().__init__()
 
-        # Sidebar
-        self.sidebar = tk.Frame(self.root, bg=COLORS['sidebar'], width=220)
-        self.sidebar.grid(row=0, column=0, sticky='nsew')
-        self.sidebar.grid_propagate(False)
-        self._build_sidebar()
-
-        # Content area
-        self.content = tk.Frame(self.root, bg=COLORS['bg'])
-        self.content.grid(row=0, column=1, sticky='nsew')
-        self.content.grid_rowconfigure(0, weight=0)
-        self.content.grid_rowconfigure(1, weight=1)
-        self.content.grid_rowconfigure(2, weight=0)
-        self.content.grid_columnconfigure(0, weight=1)
-
-        # Mobile header (hidden by default)
-        self.mobile_header = tk.Frame(self.content, bg=COLORS['sidebar'], height=50)
-        self.mobile_header.grid(row=0, column=0, sticky='new')
-        self.mobile_header.grid_remove()
-        
-        self.ham_btn = tk.Label(self.mobile_header, text='☰', bg=COLORS['sidebar'],
-                                fg=COLORS['text'], font=('Segoe UI', 16), cursor='hand2')
-        self.ham_btn.pack(side='left', padx=15)
-        self.ham_btn.bind('<Button-1>', lambda e: self._toggle_sidebar())
-        
-        tk.Label(self.mobile_header, text='Spot', bg=COLORS['sidebar'],
-                 fg=COLORS['text'], font=FONTS['heading']).pack(side='left')
-
-        # View container
-        self.view_container = tk.Frame(self.content, bg=COLORS['bg'])
-        self.view_container.grid(row=1, column=0, sticky='nsew')
-        self.view_container.grid_rowconfigure(0, weight=1)
-        self.view_container.grid_columnconfigure(0, weight=1)
-
-        # Status bar
-        self.status_bar = tk.Frame(self.content, height=28, bg=COLORS['sidebar'])
-        self.status_bar.grid(row=2, column=0, sticky='sew')
-        self.status_bar.grid_propagate(False)
-        
-        tk.Label(self.status_bar, text="Spot v1.0.0", bg=COLORS['sidebar'],
-                 font=FONTS['small'], fg=COLORS['text_muted']).pack(side='left', padx=12)
-        dot = tk.Canvas(self.status_bar, width=8, height=8, bg=COLORS['sidebar'],
-                        highlightthickness=0)
-        dot.pack(side='left')
-        dot.create_oval(0, 0, 8, 8, fill=COLORS['success'], outline='')
-        tk.Label(self.status_bar, text="All systems ready", bg=COLORS['sidebar'],
-                 font=FONTS['small'], fg=COLORS['text_muted']).pack(side='left', padx=5)
+        self.title("Spot - Personal Inventory")
+        self.geometry("1200x720")
+        self.minsize(900, 600)
+        self.configure(bg=COLORS['bg'])
 
         self.current_view = None
-        self.view_instance = None
-        self.sidebar_visible = True
+        self.current_view_name = None
 
-        self.show_view("dash")
-        self.root.bind('<Configure>', self._on_root_resize)
+        self._build_layout()
+        self.show_view("dashboard")
+
+    # ========================================================
+    # Main Layout
+    # ========================================================
+
+    def _build_layout(self):
+
+        self.sidebar = tk.Frame(
+            self,
+            bg=COLORS['sidebar'],
+            width=220
+        )
+
+        self.sidebar.pack(
+            side='left',
+            fill='y'
+        )
+
+        self.sidebar.pack_propagate(False)
+
+        self.content = tk.Frame(
+            self,
+            bg=COLORS['bg']
+        )
+
+        self.content.pack(
+            side='right',
+            fill='both',
+            expand=True
+        )
+
+        self._build_sidebar()
+
+        self.bind(
+            '<Configure>',
+            self._on_window_resize
+        )
+
+    # ========================================================
+    # Sidebar
+    # ========================================================
 
     def _build_sidebar(self):
-        logo = tk.Frame(self.sidebar, bg=COLORS['sidebar'])
-        logo.pack(fill='x', pady=(25, 5), padx=20)
-        
-        pin = tk.Canvas(logo, width=32, height=32, bg=COLORS['sidebar'], highlightthickness=0)
-        pin.pack(side='left')
-        pin.create_oval(4, 2, 28, 26, fill=COLORS['secondary'], outline='')
-        pin.create_polygon([16, 30, 8, 20, 24, 20], fill=COLORS['secondary'], outline='')
-        
-        tk.Label(logo, text="SPOT", bg=COLORS['sidebar'],
-                 font=FONTS['logo'], fg=COLORS['text']).pack(side='left', padx=(10, 0))
-        tk.Label(self.sidebar, text="Never Lose Your Stuff Again", bg=COLORS['sidebar'],
-                 font=FONTS['small'], fg=COLORS['text_muted']).pack(anchor='w', padx=20, pady=(0, 25))
 
-        self.nav_buttons = []
-        for text, key in [("Dashboard", "dash"), ("My Items", "stash"),
-                          ("Lent Out", "lent"), ("Borrowed", "borrowed")]:
-            btn = tk.Label(self.sidebar, text=text, bg=COLORS['sidebar'],
-                           fg=COLORS['text_muted'], font=FONTS['body_bold'],
-                           padx=20, pady=12, anchor='w', cursor='hand2')
-            btn.pack(fill='x')
-            btn.bind('<Enter>', lambda e, b=btn: b.config(bg=COLORS['sidebar_hover']))
-            btn.bind('<Leave>', lambda e, b=btn: b.config(bg=COLORS['sidebar']))
-            btn.bind('<Button-1>', lambda e, k=key: self.show_view(k))
-            btn.key = key
-            self.nav_buttons.append(btn)
+        # ----------------------------------------------------
+        # Logo
+        # ----------------------------------------------------
 
-        self._build_storage_indicator()
+        logo_frame = tk.Frame(
+            self.sidebar,
+            bg=COLORS['sidebar']
+        )
 
-    def _build_storage_indicator(self):
-        for w in self.sidebar.winfo_children():
-            if getattr(w, '_is_storage', False):
-                w.destroy()
+        logo_frame.pack(
+            fill='x',
+            padx=20,
+            pady=(24, 30)
+        )
 
-        stats = get_stats()
-        frame = tk.Frame(self.sidebar, bg=COLORS['sidebar_active'], padx=15, pady=15)
-        frame._is_storage = True
-        frame.pack(fill='x', padx=15, pady=(20, 15), side='bottom')
-        
-        tk.Label(frame, text="Total Items", bg=COLORS['sidebar_active'],
-                 font=FONTS['small'], fg=COLORS['text_muted']).pack(anchor='w')
-        tk.Label(frame, text=str(stats['total']), bg=COLORS['sidebar_active'],
-                 font=('Segoe UI', 18, 'bold'), fg=COLORS['text']).pack(anchor='w')
-        
-        bar = tk.Frame(frame, height=4, bg=COLORS['sidebar'])
-        bar.pack(fill='x', pady=(10, 5))
-        fill = tk.Frame(bar, height=4, bg=COLORS['primary'])
-        fill.pack(side='left')
-        fill.config(width=60)
+        tk.Label(
+            logo_frame,
+            text="SPOT",
+            bg=COLORS['sidebar'],
+            fg=COLORS['text'],
+            font=FONTS['logo']
+        ).pack(
+            anchor='w'
+        )
 
-    def _on_root_resize(self, event=None):
-        w = self.root.winfo_width()
-        
-        if w < BREAKPOINTS['md'] and self.sidebar_visible:
-            self.sidebar.grid_remove()
-            self.mobile_header.grid()
-            self.sidebar_visible = False
-        elif w >= BREAKPOINTS['md'] and not self.sidebar_visible:
-            self.sidebar.grid()
-            self.mobile_header.grid_remove()
-            self.sidebar_visible = True
+        tk.Label(
+            logo_frame,
+            text="Personal Inventory",
+            bg=COLORS['sidebar'],
+            fg=COLORS['text_muted'],
+            font=FONTS['small']
+        ).pack(
+            anchor='w',
+            pady=(2, 0)
+        )
 
-    def _toggle_sidebar(self):
-        if self.sidebar.winfo_viewable():
-            self.sidebar.grid_remove()
-        else:
-            self.sidebar.grid()
+        # ----------------------------------------------------
+        # Navigation
+        # ----------------------------------------------------
+
+        nav_frame = tk.Frame(
+            self.sidebar,
+            bg=COLORS['sidebar']
+        )
+
+        nav_frame.pack(
+            fill='x',
+            padx=12
+        )
+
+        self.nav_buttons = {}
+
+        self._create_nav_button(
+            nav_frame,
+            "▣",
+            "Dashboard",
+            "dashboard"
+        )
+
+        self._create_nav_button(
+            nav_frame,
+            "□",
+            "Inventory",
+            "stash"
+        )
+
+        self._create_nav_button(
+            nav_frame,
+            "↗",
+            "Lent Out",
+            "lent"
+        )
+
+        self._create_nav_button(
+            nav_frame,
+            "↙",
+            "Borrowed",
+            "borrowed"
+        )
+
+        # ----------------------------------------------------
+        # Bottom stats
+        # ----------------------------------------------------
+
+        bottom = tk.Frame(
+            self.sidebar,
+            bg=COLORS['sidebar']
+        )
+
+        bottom.pack(
+            side='bottom',
+            fill='x',
+            padx=16,
+            pady=20
+        )
+
+        divider = tk.Frame(
+            bottom,
+            bg=COLORS['border'],
+            height=1
+        )
+
+        divider.pack(
+            fill='x',
+            pady=(0, 14)
+        )
+
+        tk.Label(
+            bottom,
+            text="Total Items",
+            bg=COLORS['sidebar'],
+            fg=COLORS['text_muted'],
+            font=FONTS['small']
+        ).pack(
+            anchor='w'
+        )
+
+        self.total_items_label = tk.Label(
+            bottom,
+            text="0",
+            bg=COLORS['sidebar'],
+            fg=COLORS['text'],
+            font=('Segoe UI', 22, 'bold')
+        )
+
+        self.total_items_label.pack(
+            anchor='w',
+            pady=(2, 0)
+        )
+
+        self._refresh_sidebar_stats()
+
+    def _create_nav_button(
+        self,
+        parent,
+        icon,
+        text,
+        view_name
+    ):
+
+        button = tk.Frame(
+            parent,
+            bg=COLORS['sidebar'],
+            height=42,
+            cursor='hand2'
+        )
+
+        button.pack(
+            fill='x',
+            pady=3
+        )
+
+        button.pack_propagate(False)
+
+        icon_label = tk.Label(
+            button,
+            text=icon,
+            bg=COLORS['sidebar'],
+            fg=COLORS['text_muted'],
+            font=('Segoe UI', 12)
+        )
+
+        icon_label.pack(
+            side='left',
+            padx=(14, 10)
+        )
+
+        text_label = tk.Label(
+            button,
+            text=text,
+            bg=COLORS['sidebar'],
+            fg=COLORS['text_dark'],
+            font=FONTS['body_bold']
+        )
+
+        text_label.pack(
+            side='left'
+        )
+
+        self.nav_buttons[view_name] = (
+            button,
+            icon_label,
+            text_label
+        )
+
+        for widget in (
+            button,
+            icon_label,
+            text_label
+        ):
+            widget.bind(
+                '<Button-1>',
+                lambda event, v=view_name:
+                self.show_view(v)
+            )
+
+            widget.bind(
+                '<Enter>',
+                lambda event, v=view_name:
+                self._nav_hover(v, True)
+            )
+
+            widget.bind(
+                '<Leave>',
+                lambda event, v=view_name:
+                self._nav_hover(v, False)
+            )
+
+    # ========================================================
+    # Navigation Styling
+    # ========================================================
+
+    def _nav_hover(self, view_name, entering):
+
+        if self.current_view_name == view_name:
+            return
+
+        button, icon, label = self.nav_buttons[view_name]
+
+        bg = (
+            COLORS['sidebar_hover']
+            if entering
+            else COLORS['sidebar']
+        )
+
+        button.config(bg=bg)
+        icon.config(bg=bg)
+        label.config(bg=bg)
+
+    def _set_active_nav(self, view_name):
+
+        for name, widgets in self.nav_buttons.items():
+
+            button, icon, label = widgets
+
+            if name == view_name:
+
+                button.config(
+                    bg=COLORS['primary']
+                )
+
+                icon.config(
+                    bg=COLORS['primary'],
+                    fg=COLORS['text_inverse']
+                )
+
+                label.config(
+                    bg=COLORS['primary'],
+                    fg=COLORS['text_inverse']
+                )
+
+            else:
+
+                button.config(
+                    bg=COLORS['sidebar']
+                )
+
+                icon.config(
+                    bg=COLORS['sidebar'],
+                    fg=COLORS['text_muted']
+                )
+
+                label.config(
+                    bg=COLORS['sidebar'],
+                    fg=COLORS['text_dark']
+                )
+
+    # ========================================================
+    # Views
+    # ========================================================
 
     def show_view(self, view_name):
-        self.current_view = view_name
-        
-        for btn in self.nav_buttons:
-            if btn.key == view_name:
-                btn.config(bg=COLORS['sidebar_active'], fg=COLORS['text'])
-            else:
-                btn.config(bg=COLORS['sidebar'], fg=COLORS['text_muted'])
 
-        for w in self.view_container.winfo_children():
-            w.destroy()
+        if self.current_view:
+            self.current_view.destroy()
 
-        if view_name == "dash":
-            self.view_instance = DashboardView(self.view_container, self)
-        elif view_name == "stash":
-            self.view_instance = StashView(self.view_container, self)
-        elif view_name == "lent":
-            self.view_instance = LentView(self.view_container, self)
-        elif view_name == "borrowed":
-            self.view_instance = BorrowedView(self.view_container, self)
+        view_classes = {
+            'dashboard': DashboardView,
+            'stash': StashView,
+            'lent': LentView,
+            'borrowed': BorrowedView
+        }
 
-        self.view_instance.grid(row=0, column=0, sticky='nsew')
+        view_class = view_classes.get(
+            view_name,
+            DashboardView
+        )
 
-    def refresh_current_view(self):
-        if self.view_instance and hasattr(self.view_instance, 'refresh'):
-            self.view_instance.refresh()
-        self._build_storage_indicator()
+        self.current_view_name = view_name
+
+        self.current_view = view_class(
+            self.content,
+            self
+        )
+
+        self.current_view.pack(
+            fill='both',
+            expand=True
+        )
+
+        self._set_active_nav(
+            view_name
+        )
+
+        self._refresh_sidebar_stats()
+
+    # ========================================================
+    # Add / Edit
+    # ========================================================
 
     def open_add(self, default_status='stored'):
-        AddEditWindow(self.root, self, default_status=default_status)
+
+        from views.add_edit import AddEditWindow
+
+        AddEditWindow(
+            self,
+            self,
+            default_status=default_status
+        )
 
     def open_detail(self, item):
-        popup = tk.Toplevel(self.root)
-        popup.title(item['name'])
-        popup.geometry("420x520")
-        popup.minsize(320, 400)
-        popup.configure(bg=COLORS['bg'])
-        popup.transient(self.root)
-        popup.grab_set()
 
-        tk.Label(popup, text=item['name'], bg=COLORS['bg'],
-                 font=FONTS['title'], fg=COLORS['text']).pack(anchor='w', padx=20, pady=(20, 5))
+        from views.item_detail import ItemDetailWindow
 
-        from components import StatusBadge
-        status_text = 'Available' if item['status'] == 'stored' else item['status'].title()
-        StatusBadge(popup, status_text).pack(anchor='w', padx=20)
+        ItemDetailWindow(
+            self,
+            self,
+            item['id']
+        )
 
-        details = [
-            f"Location: {item['room']}" + (f" → {item['container']}" if item.get('container') else ''),
-            f"Category: {item.get('category', 'General')}",
-        ]
-        if item.get('person'):
-            details.append(f"Person: {item['person']}")
-        if item.get('due_date'):
-            details.append(f"Due Date: {item['due_date']}")
-        if item.get('tags'):
-            details.append(f"Tags: {item['tags']}")
+    # ========================================================
+    # Refresh
+    # ========================================================
 
-        for d in details:
-            tk.Label(popup, text=d, bg=COLORS['bg'], font=FONTS['body'],
-                     fg=COLORS['text_muted']).pack(anchor='w', padx=20, pady=2)
+    def refresh_current_view(self):
 
-        if item.get('photo_path'):
-            try:
-                from PIL import Image, ImageTk
-                img = Image.open(item['photo_path'])
-                img.thumbnail((280, 180))
-                photo = ImageTk.PhotoImage(img)
-                lbl = tk.Label(popup, image=photo, bg=COLORS['bg'])
-                lbl.image = photo
-                lbl.pack(pady=10)
-            except Exception:
-                pass
+        if self.current_view and hasattr(
+            self.current_view,
+            'refresh'
+        ):
+            self.current_view.refresh()
 
-        tk.Label(popup, text="Move History", bg=COLORS['bg'],
-                 font=FONTS['heading'], fg=COLORS['text']).pack(anchor='w', padx=20, pady=(15, 5))
+        self._refresh_sidebar_stats()
 
-        from database import get_history
-        history = get_history(item['id'])
+    def _refresh_sidebar_stats(self):
 
-        hf = tk.Frame(popup, bg=COLORS['bg'])
-        hf.pack(fill='x', padx=20, pady=5)
+        try:
+            stats = get_stats()
 
-        if not history:
-            tk.Label(hf, text="No history yet.", bg=COLORS['bg'],
-                     font=FONTS['small'], fg=COLORS['text_muted']).pack()
+            self.total_items_label.config(
+                text=str(stats['total']),
+                fg=COLORS['text']
+            )
+
+        except Exception:
+            self.total_items_label.config(
+                text="0",
+                fg=COLORS['text']
+            )
+
+    # ========================================================
+    # Delete
+    # ========================================================
+
+    def delete_item(self, item_id):
+
+        answer = messagebox.askyesno(
+            "Delete Item",
+            "Are you sure you want to delete this item?"
+        )
+
+        if not answer:
+            return
+
+        delete_item(item_id)
+
+        self.refresh_current_view()
+
+    # ========================================================
+    # Export
+    # ========================================================
+
+    def export_items(self):
+
+        filepath = filedialog.asksaveasfilename(
+            title="Export Inventory",
+            defaultextension=".csv",
+            filetypes=[
+                ("CSV files", "*.csv"),
+                ("All files", "*.*")
+            ]
+        )
+
+        if not filepath:
+            return
+
+        try:
+            export_to_csv(filepath)
+
+            messagebox.showinfo(
+                "Export Complete",
+                "Inventory exported successfully."
+            )
+
+        except Exception as exc:
+
+            messagebox.showerror(
+                "Export Failed",
+                f"Could not export inventory:\n\n{exc}"
+            )
+
+    # ========================================================
+    # Responsive Sidebar
+    # ========================================================
+
+    def _on_window_resize(self, event):
+
+        if event.widget != self:
+            return
+
+        width = self.winfo_width()
+
+        if width < BREAKPOINTS['md']:
+
+            self.sidebar.config(
+                width=190
+            )
+
         else:
-            for h in history:
-                text = f"{h['changed_at']}: {h['old_location']} → {h['new_location']}"
-                tk.Label(hf, text=text, bg=COLORS['bg'],
-                         font=FONTS['small'], fg=COLORS['text_muted']).pack(anchor='w', pady=1)
 
-        bf = tk.Frame(popup, bg=COLORS['bg'])
-        bf.pack(pady=16)
-        RoundedButton(bf, text="Edit", width=80,
-                      command=lambda: [popup.destroy(), self._edit_item(item['id'])]).pack(side='left', padx=4)
-        RoundedButton(bf, text="Delete", width=80, bg=COLORS['danger'],
-                      command=lambda: self._confirm_delete(item['id'], popup)).pack(side='left', padx=4)
-        if item['status'] in ('lent', 'borrowed'):
-            RoundedButton(bf, text="Mark Returned", width=130, bg=COLORS['success'],
-                          command=lambda: self._mark_returned(item['id'], popup)).pack(side='left', padx=4)
+            self.sidebar.config(
+                width=220
+            )
 
-    def _edit_item(self, item_id):
-        AddEditWindow(self.root, self, item_id=item_id)
 
-    def _confirm_delete(self, item_id, popup):
-        if messagebox.askyesno("Confirm", "Delete this item permanently?"):
-            delete_item(item_id)
-            popup.destroy()
-            self.refresh_current_view()
-
-    def _mark_returned(self, item_id, popup):
-        from database import get_item, update_item
-        item = get_item(item_id)
-        if item:
-            item['status'] = 'stored'
-            item['person'] = ''
-            item['due_date'] = ''
-            update_item(item_id, item)
-            popup.destroy()
-            self.refresh_current_view()
-
-    def export_csv(self):
-        path = filedialog.asksaveasfilename(defaultextension='.csv',
-            filetypes=[("CSV files", "*.csv")], title="Export Inventory")
-        if path:
-            export_to_csv(path)
-            messagebox.showinfo("Exported", f"Saved to:\n{path}")
-
+# ============================================================
+# Run Application
+# ============================================================
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = SpotApp(root)
-    root.mainloop()
+    app = SpotApp()
+    app.mainloop()
