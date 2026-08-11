@@ -1,10 +1,9 @@
-"""Inventory view with search and scrollable item rows."""
+"""My Items view with search and scrollable item rows."""
 
 import tkinter as tk
 
 from theme import COLORS, FONTS
 from components import SearchBar, ItemRow, RoundedButton
-from database import get_all_items
 
 
 class StashView(tk.Frame):
@@ -20,15 +19,15 @@ class StashView(tk.Frame):
 
         self._build()
 
-    # ========================================================
-    # Build
-    # ========================================================
+    # ====================================================
+    # BUILD
+    # ====================================================
 
     def _build(self):
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Header
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         header = tk.Frame(
             self,
@@ -38,7 +37,7 @@ class StashView(tk.Frame):
         header.pack(
             fill='x',
             padx=28,
-            pady=(28, 12)
+            pady=(26, 16)
         )
 
         title_frame = tk.Frame(
@@ -52,7 +51,7 @@ class StashView(tk.Frame):
 
         tk.Label(
             title_frame,
-            text="Inventory",
+            text='My Items',
             bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['title']
@@ -62,7 +61,7 @@ class StashView(tk.Frame):
 
         tk.Label(
             title_frame,
-            text="Everything you have stored in Spot",
+            text='Everything currently stored in your inventory',
             bg=COLORS['bg'],
             fg=COLORS['text_muted'],
             font=FONTS['small']
@@ -73,7 +72,7 @@ class StashView(tk.Frame):
 
         RoundedButton(
             header,
-            text="+ Add Item",
+            text='+ Add Item',
             command=self.controller.open_add,
             bg=COLORS['primary'],
             width=105,
@@ -82,9 +81,9 @@ class StashView(tk.Frame):
             side='right'
         )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Search
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         search_frame = tk.Frame(
             self,
@@ -94,13 +93,12 @@ class StashView(tk.Frame):
         search_frame.pack(
             fill='x',
             padx=28,
-            pady=(5, 10)
+            pady=(0, 10)
         )
 
         self.search = SearchBar(
             search_frame,
-            on_search=self._on_search,
-            placeholder="Search items, rooms, tags..."
+            on_search=self._on_search
         )
 
         self.search.pack(
@@ -108,36 +106,9 @@ class StashView(tk.Frame):
             expand=True
         )
 
-        # ----------------------------------------------------
-        # Item count
-        # ----------------------------------------------------
-
-        count_frame = tk.Frame(
-            self,
-            bg=COLORS['bg']
-        )
-
-        count_frame.pack(
-            fill='x',
-            padx=28,
-            pady=(4, 8)
-        )
-
-        self.count_label = tk.Label(
-            count_frame,
-            text="",
-            bg=COLORS['bg'],
-            fg=COLORS['text_muted'],
-            font=FONTS['small']
-        )
-
-        self.count_label.pack(
-            anchor='w'
-        )
-
-        # ----------------------------------------------------
-        # Scrollable list
-        # ----------------------------------------------------
+        # ------------------------------------------------
+        # Item list
+        # ------------------------------------------------
 
         list_container = tk.Frame(
             self,
@@ -148,7 +119,7 @@ class StashView(tk.Frame):
             fill='both',
             expand=True,
             padx=28,
-            pady=(0, 20)
+            pady=(5, 20)
         )
 
         self.canvas = tk.Canvas(
@@ -170,8 +141,7 @@ class StashView(tk.Frame):
 
         self.list_frame.bind(
             '<Configure>',
-            lambda event:
-            self.canvas.configure(
+            lambda event: self.canvas.configure(
                 scrollregion=self.canvas.bbox('all')
             )
         )
@@ -209,66 +179,60 @@ class StashView(tk.Frame):
 
         self._load_items()
 
-    # ========================================================
-    # Resize
-    # ========================================================
+    # ====================================================
+    # RESIZE
+    # ====================================================
 
     def _on_resize(self, event=None):
 
         if event:
-
             self.canvas.itemconfig(
                 self.canvas_window,
                 width=event.width
             )
 
-    # ========================================================
-    # Search
-    # ========================================================
+    # ====================================================
+    # SEARCH
+    # ====================================================
 
     def _on_search(self, text):
 
         self.search_text = text
-
         self._load_items()
 
-    # ========================================================
-    # Load Items
-    # ========================================================
+    # ====================================================
+    # LOAD ITEMS
+    # ====================================================
 
     def _load_items(self):
 
         for widget in self.list_frame.winfo_children():
             widget.destroy()
 
+        from database import get_all_items
+
         items = get_all_items(
             status='stored',
             search=self.search_text
         )
 
-        count = len(items)
-
-        self.count_label.config(
-            text=f"{count} item{'s' if count != 1 else ''} available"
-        )
-
         if not items:
 
-            empty_card = tk.Frame(
+            empty = tk.Frame(
                 self.list_frame,
                 bg=COLORS['card'],
                 highlightbackground=COLORS['border'],
                 highlightthickness=1
             )
 
-            empty_card.pack(
+            empty.pack(
                 fill='x',
                 pady=5
             )
 
             tk.Label(
-                empty_card,
-                text="No items found",
+                empty,
+                text='No items found',
                 bg=COLORS['card'],
                 fg=COLORS['text'],
                 font=FONTS['body_bold']
@@ -276,15 +240,9 @@ class StashView(tk.Frame):
                 pady=(30, 4)
             )
 
-            message = (
-                "Try a different search"
-                if self.search_text
-                else "Add your first item to get started"
-            )
-
             tk.Label(
-                empty_card,
-                text=message,
+                empty,
+                text='Try another search or add a new item.',
                 bg=COLORS['card'],
                 fg=COLORS['text_muted'],
                 font=FONTS['small']
@@ -304,12 +262,12 @@ class StashView(tk.Frame):
 
             row.pack(
                 fill='x',
-                pady=(0, 7)
+                pady=(0, 6)
             )
 
-    # ========================================================
-    # Mouse Wheel
-    # ========================================================
+    # ====================================================
+    # MOUSE WHEEL
+    # ====================================================
 
     def _on_mousewheel(self, event):
 
@@ -318,9 +276,9 @@ class StashView(tk.Frame):
             'units'
         )
 
-    # ========================================================
-    # Refresh
-    # ========================================================
+    # ====================================================
+    # REFRESH
+    # ====================================================
 
     def refresh(self):
 
