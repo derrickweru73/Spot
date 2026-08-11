@@ -1,250 +1,679 @@
-"""Dashboard view with stats, recent items, reminders, and move history."""
+"""Spot dashboard view."""
 
 import tkinter as tk
-from theme import COLORS, FONTS, BREAKPOINTS
-from components import RoundedButton, StatCard, ItemRow, SearchBar
-from database import get_stats, get_all_items, get_history
-from datetime import datetime
+
+from theme import COLORS, FONTS
+from components import StatCard, ItemRow, RoundedButton
+from database import get_stats, get_all_items
 
 
 class DashboardView(tk.Frame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg=COLORS['bg'])
+        super().__init__(
+            parent,
+            bg=COLORS['bg']
+        )
+
         self.controller = controller
+
         self._build()
+
+    # ========================================================
+    # Build Dashboard
+    # ========================================================
 
     def _build(self):
-        self.canvas = tk.Canvas(self, bg=COLORS['bg'], highlightthickness=0)
-        self.scroll = tk.Scrollbar(self, orient='vertical', command=self.canvas.yview)
-        self.content = tk.Frame(self.canvas, bg=COLORS['bg'])
-        
-        self.content_window = self.canvas.create_window((0, 0), window=self.content, anchor='nw')
-        
-        self.content.bind('<Configure>', lambda e: self.canvas.configure(
-            scrollregion=self.canvas.bbox('all')))
-        
-        self.canvas.configure(yscrollcommand=self.scroll.set)
-        
-        self.canvas.pack(side='left', fill='both', expand=True)
-        self.scroll.pack(side='right', fill='y')
-        
-        self.canvas.bind_all('<MouseWheel>',
-                             lambda e: self.canvas.yview_scroll(int(-1*(e.delta/120)), 'units'))
-        
-        self.canvas.bind('<Configure>', self._on_canvas_resize)
-        self.bind('<Configure>', self._on_view_resize)
 
-        # Header
-        header = tk.Frame(self.content, bg=COLORS['bg'])
-        header.pack(fill='x', padx=20, pady=(20, 10))
-        tk.Label(header, text="Dashboard", bg=COLORS['bg'],
-                 font=FONTS['title'], fg=COLORS['text']).pack(side='left')
+        # ----------------------------------------------------
+        # Scrollable dashboard
+        # ----------------------------------------------------
 
-        RoundedButton(header, text="+ Add Item", command=self.controller.open_add,
-                      bg=COLORS['primary'], width=120).pack(side='right')
+        self.canvas = tk.Canvas(
+            self,
+            bg=COLORS['bg'],
+            highlightthickness=0
+        )
 
-        # Search
-        bar = tk.Frame(self.content, bg=COLORS['bg'])
-        bar.pack(fill='x', padx=20, pady=5)
-        self.search = SearchBar(bar, on_search=self._on_search, placeholder='Search anything...')
-        self.search.pack(fill='x', expand=True)
+        self.scrollbar = tk.Scrollbar(
+            self,
+            orient='vertical',
+            command=self.canvas.yview
+        )
 
-        # Stats cards container
-        self.stats_frame = tk.Frame(self.content, bg=COLORS['bg'])
-        self.stats_frame.pack(fill='x', padx=20, pady=15)
+        self.container = tk.Frame(
+            self.canvas,
+            bg=COLORS['bg']
+        )
+
+        self.container.bind(
+            '<Configure>',
+            lambda event:
+            self.canvas.configure(
+                scrollregion=self.canvas.bbox('all')
+            )
+        )
+
+        self.canvas_window = self.canvas.create_window(
+            (0, 0),
+            window=self.container,
+            anchor='nw'
+        )
+
+        self.canvas.configure(
+            yscrollcommand=self.scrollbar.set
+        )
+
+        self.canvas.pack(
+            side='left',
+            fill='both',
+            expand=True
+        )
+
+        self.scrollbar.pack(
+            side='right',
+            fill='y'
+        )
+
+        self.canvas.bind(
+            '<Configure>',
+            self._resize_container
+        )
+
+        self.canvas.bind_all(
+            '<MouseWheel>',
+            self._on_mousewheel
+        )
+
+        self._build_content()
+
+    # ========================================================
+    # Header
+    # ========================================================
+
+    def _build_content(self):
+
+        content = self.container
+
+        header = tk.Frame(
+            content,
+            bg=COLORS['bg']
+        )
+
+        header.pack(
+            fill='x',
+            padx=28,
+            pady=(28, 20)
+        )
+
+        title_frame = tk.Frame(
+            header,
+            bg=COLORS['bg']
+        )
+
+        title_frame.pack(
+            side='left'
+        )
+
+        tk.Label(
+            title_frame,
+            text="Dashboard",
+            bg=COLORS['bg'],
+            fg=COLORS['text'],
+            font=FONTS['title']
+        ).pack(
+            anchor='w'
+        )
+
+        tk.Label(
+            title_frame,
+            text="Overview of your personal inventory",
+            bg=COLORS['bg'],
+            fg=COLORS['text_muted'],
+            font=FONTS['small']
+        ).pack(
+            anchor='w',
+            pady=(3, 0)
+        )
+
+        RoundedButton(
+            header,
+            text="+ Add Item",
+            command=self.controller.open_add,
+            bg=COLORS['primary'],
+            width=105,
+            height=36
+        ).pack(
+            side='right'
+        )
+
+        # ----------------------------------------------------
+        # Statistics
+        # ----------------------------------------------------
+
+        self._build_stats(content)
+
+        # ----------------------------------------------------
+        # Main sections
+        # ----------------------------------------------------
+
+        sections = tk.Frame(
+            content,
+            bg=COLORS['bg']
+        )
+
+        sections.pack(
+            fill='both',
+            expand=True,
+            padx=28,
+            pady=(22, 30)
+        )
+
+        sections.grid_columnconfigure(
+            0,
+            weight=3
+        )
+
+        sections.grid_columnconfigure(
+            1,
+            weight=2
+        )
+
+        sections.grid_rowconfigure(
+            0,
+            weight=1
+        )
+
+        self._build_recent_items(
+            sections
+        )
+
+        self._build_reminders(
+            sections
+        )
+
+    # ========================================================
+    # Statistics
+    # ========================================================
+
+    def _build_stats(self, parent):
 
         stats = get_stats()
-        self.stat_cards = [
-            StatCard(self.stats_frame, '■', 'Total Items', stats['total'], COLORS['info'],
-                     command=lambda: self.controller.show_view('stash')),
-            StatCard(self.stats_frame, '!', 'Lost Items', stats['lost'], COLORS['danger']),
-            StatCard(self.stats_frame, '↗', 'Lent Out', stats['lent'], COLORS['warning'],
-                     command=lambda: self.controller.show_view('lent')),
-            StatCard(self.stats_frame, '↙', 'Borrowed', stats['borrowed'], COLORS['success'],
-                     command=lambda: self.controller.show_view('borrowed')),
+
+        stats_frame = tk.Frame(
+            parent,
+            bg=COLORS['bg']
+        )
+
+        stats_frame.pack(
+            fill='x',
+            padx=28
+        )
+
+        for column in range(4):
+            stats_frame.grid_columnconfigure(
+                column,
+                weight=1
+            )
+
+        cards = [
+            (
+                '▣',
+                'Total Items',
+                stats['total'],
+                COLORS['stat_total'],
+                None
+            ),
+            (
+                '✓',
+                'Available',
+                stats['stored'],
+                COLORS['success'],
+                lambda: self.controller.show_view('stash')
+            ),
+            (
+                '↗',
+                'Lent Out',
+                stats['lent'],
+                COLORS['stat_lent'],
+                lambda: self.controller.show_view('lent')
+            ),
+            (
+                '↙',
+                'Borrowed',
+                stats['borrowed'],
+                COLORS['stat_borrowed'],
+                lambda: self.controller.show_view('borrowed')
+            )
         ]
 
-        # Main split area
-        self.main_area = tk.Frame(self.content, bg=COLORS['bg'])
-        self.main_area.pack(fill='both', expand=True, padx=20, pady=10)
-        self.main_area.grid_columnconfigure(0, weight=1)
+        for index, card_data in enumerate(cards):
 
-        # Left: Recent Items
-        self.left_panel = tk.Frame(self.main_area, bg=COLORS['bg'])
-        self.left_panel.grid(row=0, column=0, sticky='nsew', padx=(0, 10))
-        
-        self.left_header = tk.Frame(self.left_panel, bg=COLORS['bg'])
-        self.left_header.pack(fill='x', pady=(0, 8))
-        tk.Label(self.left_header, text="Recent Items", bg=COLORS['bg'],
-                 font=FONTS['heading'], fg=COLORS['text']).pack(side='left')
-        va = tk.Label(self.left_header, text="View All →", bg=COLORS['bg'],
-                      font=FONTS['small'], fg=COLORS['primary'], cursor='hand2')
-        va.pack(side='right')
-        va.bind('<Button-1>', lambda e: self.controller.show_view('stash'))
-        
-        self.recent_container = tk.Frame(self.left_panel, bg=COLORS['border'])
-        self.recent_container.pack(fill='both', expand=True)
+            card = StatCard(
+                stats_frame,
+                *card_data
+            )
 
-        # Right: Sidebar widgets
-        self.right_panel = tk.Frame(self.main_area, bg=COLORS['bg'], width=300)
-        self.right_panel.grid(row=0, column=1, sticky='ns', padx=(10, 0))
-        self.right_panel.grid_propagate(False)
-        
-        # Quick Search
-        tk.Label(self.right_panel, text="Quick Search", bg=COLORS['bg'],
-                 font=FONTS['heading'], fg=COLORS['text']).pack(anchor='w', pady=(0, 8))
-        qs_frame = tk.Frame(self.right_panel, bg=COLORS['card'], padx=15, pady=15)
-        qs_frame.pack(fill='x', pady=(0, 15))
-        qs_search = SearchBar(qs_frame, on_search=self._quick_search,
-                              placeholder='What are you looking for?')
-        qs_search.pack(fill='x')
-        RoundedButton(qs_frame, text="Search", command=lambda: self._quick_search(qs_search.get()),
-                      bg=COLORS['primary'], width=100).pack(pady=(10, 0))
+            card.grid(
+                row=0,
+                column=index,
+                sticky='nsew',
+                padx=(0 if index == 0 else 6, 0),
+                pady=0
+            )
 
-        # Reminders
-        tk.Label(self.right_panel, text="Reminders", bg=COLORS['bg'],
-                 font=FONTS['heading'], fg=COLORS['text']).pack(anchor='w', pady=(10, 8))
-        self.reminders_container = tk.Frame(self.right_panel, bg=COLORS['bg'])
-        self.reminders_container.pack(fill='x')
+    # ========================================================
+    # Recent Items
+    # ========================================================
 
-        # Recently Moved
-        tk.Label(self.right_panel, text="Recently Moved", bg=COLORS['bg'],
-                 font=FONTS['heading'], fg=COLORS['text']).pack(anchor='w', pady=(20, 8))
-        self.moved_container = tk.Frame(self.right_panel, bg=COLORS['bg'])
-        self.moved_container.pack(fill='x')
+    def _build_recent_items(self, parent):
 
-        self._load_data()
+        section = tk.Frame(
+            parent,
+            bg=COLORS['card'],
+            highlightbackground=COLORS['border'],
+            highlightthickness=1
+        )
 
-    def _on_canvas_resize(self, event=None):
-        canvas_width = self.canvas.winfo_width()
-        if self.scroll.winfo_viewable():
-            canvas_width -= 20
-        self.canvas.itemconfig(self.content_window, width=max(canvas_width, 300))
+        section.grid(
+            row=0,
+            column=0,
+            sticky='nsew',
+            padx=(0, 8)
+        )
 
-    def _on_view_resize(self, event=None):
-        w = self.winfo_width()
-        
-        if w >= BREAKPOINTS['lg']:
-            cols = 4
-        elif w >= BREAKPOINTS['sm']:
-            cols = 2
-        else:
-            cols = 1
-        
-        for i, card in enumerate(self.stat_cards):
-            card.grid_forget()
-            row, col = divmod(i, cols)
-            card.grid(row=row, column=col, padx=6, pady=6, sticky='nsew')
-        
-        for c in range(cols):
-            self.stats_frame.grid_columnconfigure(c, weight=1)
+        header = tk.Frame(
+            section,
+            bg=COLORS['card']
+        )
 
-        if w >= BREAKPOINTS['md']:
-            self.right_panel.grid()
-            self.main_area.grid_columnconfigure(1, weight=0)
-        else:
-            self.right_panel.grid_remove()
-            self.main_area.grid_columnconfigure(1, weight=0)
+        header.pack(
+            fill='x',
+            padx=18,
+            pady=(16, 12)
+        )
 
-    def _on_search(self, text):
-        self._load_recent(search=text)
+        tk.Label(
+            header,
+            text="Recent Items",
+            bg=COLORS['card'],
+            fg=COLORS['text'],
+            font=FONTS['heading']
+        ).pack(
+            side='left'
+        )
 
-    def _quick_search(self, text):
-        self.controller.show_view('stash')
+        tk.Button(
+            header,
+            text="View all",
+            command=lambda:
+            self.controller.show_view('stash'),
+            bg=COLORS['card'],
+            fg=COLORS['primary'],
+            activebackground=COLORS['card'],
+            activeforeground=COLORS['primary'],
+            relief='flat',
+            borderwidth=0,
+            cursor='hand2',
+            font=FONTS['small_bold']
+        ).pack(
+            side='right'
+        )
 
-    def _load_data(self):
-        self._load_recent()
-        self._load_reminders()
-        self._load_moved()
+        items = get_all_items(
+            limit=5
+        )
 
-    def _load_recent(self, search=''):
-        for w in self.recent_container.winfo_children():
-            w.destroy()
+        list_frame = tk.Frame(
+            section,
+            bg=COLORS['card']
+        )
 
-        items = get_all_items(search=search, limit=8)
+        list_frame.pack(
+            fill='both',
+            expand=True,
+            padx=12,
+            pady=(0, 12)
+        )
+
         if not items:
-            tk.Label(self.recent_container, text="No items yet. Add your first!",
-                     bg=COLORS['card'], font=FONTS['body'], fg=COLORS['text_muted'],
-                     padx=20, pady=30).pack(fill='x')
+
+            tk.Label(
+                list_frame,
+                text="No items added yet.",
+                bg=COLORS['card'],
+                fg=COLORS['text_muted'],
+                font=FONTS['body']
+            ).pack(
+                pady=35
+            )
+
             return
 
         for item in items:
-            row = ItemRow(self.recent_container, item, on_click=self.controller.open_detail)
-            row.pack(fill='x', pady=(0, 1))
 
-    def _load_reminders(self):
-        for w in self.reminders_container.winfo_children():
-            w.destroy()
+            row = ItemRow(
+                list_frame,
+                item,
+                on_click=self.controller.open_detail
+            )
+
+            row.pack(
+                fill='x',
+                pady=(0, 6)
+            )
+
+    # ========================================================
+    # Reminders
+    # ========================================================
+
+    def _build_reminders(self, parent):
+
+        section = tk.Frame(
+            parent,
+            bg=COLORS['card'],
+            highlightbackground=COLORS['border'],
+            highlightthickness=1
+        )
+
+        section.grid(
+            row=0,
+            column=1,
+            sticky='nsew',
+            padx=(8, 0)
+        )
+
+        header = tk.Frame(
+            section,
+            bg=COLORS['card']
+        )
+
+        header.pack(
+            fill='x',
+            padx=18,
+            pady=(16, 12)
+        )
+
+        tk.Label(
+            header,
+            text="Reminders",
+            bg=COLORS['card'],
+            fg=COLORS['text'],
+            font=FONTS['heading']
+        ).pack(
+            side='left'
+        )
+
+        stats = get_stats()
+
+        overdue = stats['overdue']
+
+        if overdue > 0:
+
+            tk.Label(
+                header,
+                text=str(overdue),
+                bg=COLORS['danger'],
+                fg=COLORS['text_inverse'],
+                font=FONTS['small_bold'],
+                padx=7,
+                pady=2
+            ).pack(
+                side='right'
+            )
+
+        else:
+
+            tk.Label(
+                header,
+                text="0",
+                bg=COLORS['success'],
+                fg=COLORS['text_inverse'],
+                font=FONTS['small_bold'],
+                padx=7,
+                pady=2
+            ).pack(
+                side='right'
+            )
+
+        reminder_frame = tk.Frame(
+            section,
+            bg=COLORS['card']
+        )
+
+        reminder_frame.pack(
+            fill='both',
+            expand=True,
+            padx=18,
+            pady=(0, 18)
+        )
+
+        if overdue:
+
+            overdue_items = self._get_overdue_items()
+
+            for item in overdue_items[:5]:
+
+                self._create_reminder(
+                    reminder_frame,
+                    item,
+                    overdue=True
+                )
+
+        else:
+
+            empty = tk.Frame(
+                reminder_frame,
+                bg=COLORS['card']
+            )
+
+            empty.pack(
+                fill='both',
+                expand=True
+            )
+
+            tk.Label(
+                empty,
+                text="✓",
+                bg=COLORS['card'],
+                fg=COLORS['success'],
+                font=('Segoe UI', 24, 'bold')
+            ).pack(
+                pady=(35, 5)
+            )
+
+            tk.Label(
+                empty,
+                text="You're all caught up!",
+                bg=COLORS['card'],
+                fg=COLORS['text'],
+                font=FONTS['body_bold']
+            ).pack()
+
+            tk.Label(
+                empty,
+                text="No overdue items.",
+                bg=COLORS['card'],
+                fg=COLORS['text_muted'],
+                font=FONTS['small']
+            ).pack(
+                pady=(3, 0)
+            )
+
+    # ========================================================
+    # Reminder Item
+    # ========================================================
+
+    def _create_reminder(
+        self,
+        parent,
+        item,
+        overdue=False
+    ):
+
+        frame = tk.Frame(
+            parent,
+            bg=COLORS['bg'],
+            highlightbackground=COLORS['border'],
+            highlightthickness=1,
+            cursor='hand2'
+        )
+
+        frame.pack(
+            fill='x',
+            pady=(0, 8)
+        )
+
+        icon = tk.Label(
+            frame,
+            text='!',
+            bg=COLORS['danger'],
+            fg=COLORS['text_inverse'],
+            font=('Segoe UI', 10, 'bold'),
+            width=3
+        )
+
+        icon.pack(
+            side='left',
+            padx=10,
+            pady=10
+        )
+
+        info = tk.Frame(
+            frame,
+            bg=COLORS['bg']
+        )
+
+        info.pack(
+            side='left',
+            fill='x',
+            expand=True,
+            pady=8
+        )
+
+        tk.Label(
+            info,
+            text=item['name'],
+            bg=COLORS['bg'],
+            fg=COLORS['text'],
+            font=FONTS['body_bold']
+        ).pack(
+            anchor='w'
+        )
+
+        person = item.get('person') or 'Unknown'
+
+        tk.Label(
+            info,
+            text=f"With {person}",
+            bg=COLORS['bg'],
+            fg=COLORS['text_muted'],
+            font=FONTS['small']
+        ).pack(
+            anchor='w',
+            pady=(2, 0)
+        )
+
+        due = item.get('due_date') or ''
+
+        tk.Label(
+            frame,
+            text=due,
+            bg=COLORS['bg'],
+            fg=COLORS['danger'],
+            font=FONTS['small_bold']
+        ).pack(
+            side='right',
+            padx=10
+        )
+
+        frame.bind(
+            '<Button-1>',
+            lambda event, i=item:
+            self.controller.open_detail(i)
+        )
+
+        for child in frame.winfo_children():
+
+            child.bind(
+                '<Button-1>',
+                lambda event, i=item:
+                self.controller.open_detail(i)
+            )
+
+    # ========================================================
+    # Overdue Items
+    # ========================================================
+
+    def _get_overdue_items(self):
+
+        from datetime import datetime
+
+        items = get_all_items()
 
         now = datetime.now()
-        items = get_all_items()
-        reminders = []
+
+        overdue_items = []
+
         for item in items:
-            if item.get('due_date') and item['status'] in ('lent', 'borrowed'):
-                due = None
-                # Try multiple date formats
-                for fmt in ('%Y-%m-%d %H:%M', '%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
-                    try:
-                        due = datetime.strptime(item['due_date'].strip(), fmt)
-                        break
-                    except ValueError:
-                        continue
-                
-                if due is None:
-                    continue  # Skip unparseable dates
-                
-                delta = (due - now).days
-                if delta <= 3:  # Due within 3 days or overdue
-                    reminders.append((item, delta))
 
-        if not reminders:
-            tk.Label(self.reminders_container, text="No upcoming reminders",
-                     bg=COLORS['card'], font=FONTS['small'], fg=COLORS['text_muted'],
-                     padx=12, pady=12).pack(fill='x')
-            return
+            due_date = item.get(
+                'due_date'
+            )
 
-        for item, delta in reminders:
-            frame = tk.Frame(self.reminders_container, bg=COLORS['card'], padx=12, pady=10)
-            frame.pack(fill='x', pady=(0, 6))
-            top = tk.Frame(frame, bg=COLORS['card'])
-            top.pack(fill='x')
-            icon = '↗' if item['status'] == 'lent' else '↙'
-            color = COLORS['warning'] if delta >= 0 else COLORS['danger']
-            due_text = f"Due in {delta} days" if delta > 0 else "Due today" if delta == 0 else "OVERDUE"
-            tk.Label(top, text=f"{icon} {item['name']}", bg=COLORS['card'],
-                     font=FONTS['body_bold'], fg=COLORS['text']).pack(side='left')
-            tk.Label(top, text=due_text, bg=COLORS['card'],
-                     font=FONTS['small_bold'], fg=color).pack(side='right')
-            sub = f"Lent to {item['person']}" if item['status'] == 'lent' else f"Borrowed from {item['person']}"
-            tk.Label(frame, text=sub, bg=COLORS['card'],
-                     font=FONTS['small'], fg=COLORS['text_muted']).pack(anchor='w')
+            if not due_date:
+                continue
 
-    def _load_moved(self):
-        for w in self.moved_container.winfo_children():
-            w.destroy()
+            if item.get('status') not in (
+                'lent',
+                'borrowed'
+            ):
+                continue
 
-        history = get_history(limit=4)
-        if not history:
-            tk.Label(self.moved_container, text="No moves yet",
-                     bg=COLORS['card'], font=FONTS['small'], fg=COLORS['text_muted'],
-                     padx=12, pady=12).pack(fill='x')
-            return
+            try:
 
-        for h in history:
-            frame = tk.Frame(self.moved_container, bg=COLORS['card'], padx=12, pady=8)
-            frame.pack(fill='x', pady=(0, 6))
-            tk.Label(frame, text=h['item_name'], bg=COLORS['card'],
-                     font=FONTS['body_bold'], fg=COLORS['text']).pack(anchor='w')
-            move_text = f"{h['old_location']} → {h['new_location']}"
-            if len(move_text) > 35:
-                move_text = move_text[:32] + '...'
-            tk.Label(frame, text=move_text, bg=COLORS['card'],
-                     font=FONTS['small'], fg=COLORS['text_muted']).pack(anchor='w')
-            date = h['changed_at'].split()[0] if h['changed_at'] else ''
-            tk.Label(frame, text=date, bg=COLORS['card'],
-                     font=FONTS['small'], fg=COLORS['text_dark']).pack(anchor='w')
+                due = datetime.fromisoformat(
+                    due_date
+                )
+
+                if due < now:
+                    overdue_items.append(
+                        item
+                    )
+
+            except ValueError:
+                continue
+
+        return overdue_items
+
+    # ========================================================
+    # Responsive Canvas
+    # ========================================================
+
+    def _resize_container(self, event):
+
+        self.canvas.itemconfig(
+            self.canvas_window,
+            width=event.width
+        )
+
+    # ========================================================
+    # Mouse Wheel
+    # ========================================================
+
+    def _on_mousewheel(self, event):
+
+        self.canvas.yview_scroll(
+            int(-1 * (event.delta / 120)),
+            'units'
+        )
+
+    # ========================================================
+    # Refresh
+    # ========================================================
 
     def refresh(self):
-        for w in self.content.winfo_children():
-            w.destroy()
-        self._build()
+
+        for widget in self.container.winfo_children():
+            widget.destroy()
+
+        self._build_content()
