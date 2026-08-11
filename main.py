@@ -120,7 +120,7 @@ class SpotApp:
         tk.Label(frame, text="Total Items", bg=COLORS['sidebar_active'],
                  font=FONTS['small'], fg=COLORS['text_muted']).pack(anchor='w')
         tk.Label(frame, text=str(stats['total']), bg=COLORS['sidebar_active'],
-                 font=('Segoe UI', 18, 'bold'), fg=COLORS['primary']).pack(anchor='w')
+                 font=('Segoe UI', 18, 'bold'), fg=COLORS['text']).pack(anchor='w')
         
         bar = tk.Frame(frame, height=4, bg=COLORS['sidebar'])
         bar.pack(fill='x', pady=(10, 5))
