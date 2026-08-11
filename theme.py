@@ -1,25 +1,31 @@
 """Spot color palette and typography."""
-COLORS = {
-    'bg': '#FAF8FF',
-    'card': '#F2F3FF',
-    'card_hover': '#E8EAF8',
 
+COLORS = {
+    # Core interface
+    'bg': '#FAF8FF',
     'sidebar': '#F2F3FF',
     'sidebar_hover': '#E8EAF8',
     'sidebar_active': '#FF7A00',
 
-    'input_bg': '#FFFFFF',
+    # Cards and surfaces
+    'card': '#FFFFFF',
+    'card_hover': '#F9FAFB',
+    'input_bg': '#F9FAFB',
     'popup_bg': '#FFFFFF',
 
-    'border': '#E0E1EA',
-    'border_light': '#D3D5E0',
+    # Borders
+    'border': '#E5E7EB',
+    'border_light': '#E5E7EB',
 
+    # Primary
     'primary': '#FF7A00',
     'primary_hover': '#E56D00',
 
+    # Secondary
     'secondary': '#00A3FF',
     'secondary_hover': '#008EDB',
 
+    # Status
     'success': '#2EB872',
     'warning': '#FF7A00',
     'danger': '#E53935',
@@ -31,16 +37,17 @@ COLORS = {
     'stat_lent': '#FF7A00',
     'stat_borrowed': '#2EB872',
 
+    # Text
     'text': '#1A1B21',
-    'text_muted': '#6B6D78',
-    'text_dark': '#4B4D57',
+    'text_muted': '#6B7280',
+    'text_dark': '#4B5563',
     'text_inverse': '#FFFFFF',
 }
 
 
 FONTS = {
     'logo': ('Segoe UI', 20, 'bold'),
-    'title': ('Segoe UI', 18, 'bold'),
+    'title': ('Segoe UI', 20, 'bold'),
     'heading': ('Segoe UI', 13, 'bold'),
 
     'body': ('Segoe UI', 10),
@@ -57,11 +64,8 @@ FONTS = {
 STATUS_COLORS = {
     'stored': '#2EB872',
     'available': '#2EB872',
-
     'lent': '#FF7A00',
-
     'borrowed': '#00A3FF',
-
     'lost': '#E53935',
     'overdue': '#E53935',
 }
