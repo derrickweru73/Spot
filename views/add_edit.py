@@ -17,6 +17,7 @@ class AddEditWindow(tk.Toplevel):
         item_id=None,
         default_status='stored'
     ):
+
         super().__init__(parent)
 
         self.controller = controller
@@ -24,17 +25,20 @@ class AddEditWindow(tk.Toplevel):
         self.result_photo = ''
 
         self.title(
-            "Edit Item" if item_id else "Add New Item"
+            'Edit Item' if item_id else 'Add New Item'
         )
 
-        self.geometry("500x680")
+        self.geometry(
+            '480x620'
+        )
+
         self.configure(
             bg=COLORS['bg']
         )
 
         self.minsize(
-            380,
-            560
+            360,
+            500
         )
 
         self.transient(parent)
@@ -47,16 +51,16 @@ class AddEditWindow(tk.Toplevel):
 
         self.center_window()
 
-    # ========================================================
-    # Center Window
-    # ========================================================
+    # ====================================================
+    # CENTER WINDOW
+    # ====================================================
 
     def center_window(self):
 
         self.update_idletasks()
 
-        width = 500
-        height = 680
+        width = 480
+        height = 620
 
         x = (
             self.winfo_screenwidth() // 2
@@ -69,18 +73,14 @@ class AddEditWindow(tk.Toplevel):
         )
 
         self.geometry(
-            f"{width}x{height}+{x}+{y}"
+            f'{width}x{height}+{x}+{y}'
         )
 
-    # ========================================================
-    # Build Form
-    # ========================================================
+    # ====================================================
+    # FORM
+    # ====================================================
 
     def _build_form(self, default_status):
-
-        # ----------------------------------------------------
-        # Scrollable area
-        # ----------------------------------------------------
 
         canvas = tk.Canvas(
             self,
@@ -107,10 +107,11 @@ class AddEditWindow(tk.Toplevel):
             )
         )
 
-        self.canvas_window = canvas.create_window(
+        canvas_window = canvas.create_window(
             (0, 0),
             window=self.form_frame,
-            anchor='nw'
+            anchor='nw',
+            width=450
         )
 
         canvas.configure(
@@ -121,25 +122,21 @@ class AddEditWindow(tk.Toplevel):
             side='left',
             fill='both',
             expand=True,
-            padx=(20, 5),
-            pady=20
+            padx=12,
+            pady=12
         )
 
         scrollbar.pack(
             side='right',
-            fill='y',
-            pady=20
+            fill='y'
         )
 
         canvas.bind(
             '<Configure>',
             lambda event:
             canvas.itemconfig(
-                self.canvas_window,
-                width=max(
-                    event.width,
-                    360
-                )
+                canvas_window,
+                width=max(event.width, 400)
             )
         )
 
@@ -154,16 +151,16 @@ class AddEditWindow(tk.Toplevel):
 
         f = self.form_frame
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Header
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         tk.Label(
             f,
             text=(
-                "Edit Item"
+                'Edit Item'
                 if self.item_id
-                else "Add New Item"
+                else 'Add New Item'
             ),
             bg=COLORS['bg'],
             fg=COLORS['text'],
@@ -176,30 +173,30 @@ class AddEditWindow(tk.Toplevel):
         tk.Label(
             f,
             text=(
-                "Update your item details."
+                'Update your item information'
                 if self.item_id
-                else "Add something to your Spot inventory."
+                else 'Add something to your inventory'
             ),
             bg=COLORS['bg'],
             fg=COLORS['text_muted'],
             font=FONTS['small']
         ).pack(
             anchor='w',
-            pady=(0, 16)
+            pady=(0, 12)
         )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Fields
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         fields = [
             (
-                "Item Name *",
+                'Item Name *',
                 'name',
                 'entry'
             ),
             (
-                "Category",
+                'Category',
                 'cat',
                 'combo',
                 [
@@ -215,7 +212,7 @@ class AddEditWindow(tk.Toplevel):
                 ]
             ),
             (
-                "Room / Location *",
+                'Room / Location *',
                 'room',
                 'combo',
                 [
@@ -230,22 +227,22 @@ class AddEditWindow(tk.Toplevel):
                 ]
             ),
             (
-                "Container / Details",
+                'Container / Details',
                 'container',
                 'entry'
             ),
             (
-                "Person (Lent/Borrowed)",
+                'Person (Lent/Borrowed)',
                 'person',
                 'entry'
             ),
             (
-                "Due Date (YYYY-MM-DD HH:MM)",
+                'Due Date (YYYY-MM-DD HH:MM)',
                 'due',
                 'entry'
             ),
             (
-                "Tags (comma separated)",
+                'Tags (comma separated)',
                 'tags',
                 'entry'
             )
@@ -257,7 +254,7 @@ class AddEditWindow(tk.Toplevel):
 
             label = field[0]
             key = field[1]
-            wtype = field[2]
+            widget_type = field[2]
 
             tk.Label(
                 f,
@@ -267,16 +264,16 @@ class AddEditWindow(tk.Toplevel):
                 font=FONTS['body_bold']
             ).pack(
                 anchor='w',
-                pady=(9, 4)
+                pady=(9, 3)
             )
 
-            if wtype == 'entry':
+            if widget_type == 'entry':
 
                 var = tk.StringVar()
 
                 self.vars[key] = var
 
-                entry = tk.Entry(
+                tk.Entry(
                     f,
                     textvariable=var,
                     font=FONTS['body'],
@@ -287,14 +284,12 @@ class AddEditWindow(tk.Toplevel):
                     highlightthickness=1,
                     highlightcolor=COLORS['primary'],
                     highlightbackground=COLORS['border']
-                )
-
-                entry.pack(
+                ).pack(
                     fill='x',
-                    ipady=7
+                    ipady=6
                 )
 
-            elif wtype == 'combo':
+            elif widget_type == 'combo':
 
                 values = field[3]
 
@@ -314,22 +309,22 @@ class AddEditWindow(tk.Toplevel):
 
                 combo.pack(
                     fill='x',
-                    ipady=5
+                    ipady=4
                 )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Status
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         tk.Label(
             f,
-            text="Status",
+            text='Status',
             bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['body_bold']
         ).pack(
             anchor='w',
-            pady=(12, 5)
+            pady=(10, 4)
         )
 
         self.status_var = tk.StringVar(
@@ -367,27 +362,27 @@ class AddEditWindow(tk.Toplevel):
                 font=FONTS['small']
             ).pack(
                 side='left',
-                padx=(0, 8)
+                padx=3
             )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Notes
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         tk.Label(
             f,
-            text="Notes",
+            text='Notes',
             bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['body_bold']
         ).pack(
             anchor='w',
-            pady=(12, 5)
+            pady=(10, 3)
         )
 
         self.notes_text = tk.Text(
             f,
-            height=4,
+            height=3,
             font=FONTS['body'],
             bg=COLORS['input_bg'],
             fg=COLORS['text'],
@@ -402,24 +397,23 @@ class AddEditWindow(tk.Toplevel):
             fill='x'
         )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Photo
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         RoundedButton(
             f,
-            text="Attach Photo",
+            text='Attach Photo',
             command=self._pick_photo,
             bg=COLORS['text_muted'],
-            width=150,
-            height=34
+            width=180
         ).pack(
-            pady=(14, 6)
+            pady=12
         )
 
         self.photo_label = tk.Label(
             f,
-            text='No photo attached',
+            text='',
             bg=COLORS['bg'],
             fg=COLORS['text_muted'],
             font=FONTS['small']
@@ -427,9 +421,9 @@ class AddEditWindow(tk.Toplevel):
 
         self.photo_label.pack()
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Buttons
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         button_frame = tk.Frame(
             f,
@@ -437,45 +431,43 @@ class AddEditWindow(tk.Toplevel):
         )
 
         button_frame.pack(
-            pady=(20, 12)
+            pady=16
         )
 
         RoundedButton(
             button_frame,
-            text="Save",
+            text='Save',
             command=self._save,
             bg=COLORS['primary'],
-            width=110,
-            height=38
+            width=100
         ).pack(
             side='left',
-            padx=5
+            padx=4
         )
 
         RoundedButton(
             button_frame,
-            text="Cancel",
+            text='Cancel',
             command=self.destroy,
             bg=COLORS['danger'],
-            width=110,
-            height=38
+            width=100
         ).pack(
             side='left',
-            padx=5
+            padx=4
         )
 
-    # ========================================================
-    # Pick Photo
-    # ========================================================
+    # ====================================================
+    # PHOTO
+    # ====================================================
 
     def _pick_photo(self):
 
         path = filedialog.askopenfilename(
-            title="Select Photo",
+            title='Select Photo',
             filetypes=[
                 (
-                    "Images",
-                    "*.png *.jpg *.jpeg *.gif *.bmp"
+                    'Images',
+                    '*.png *.jpg *.jpeg *.gif *.bmp'
                 )
             ]
         )
@@ -485,16 +477,13 @@ class AddEditWindow(tk.Toplevel):
             self.result_photo = path
 
             self.photo_label.config(
-                text=(
-                    "Attached: "
-                    f"{path.replace(chr(92), '/').split('/')[-1]}"
-                ),
+                text=f'Attached: {path.split("/")[-1]}',
                 fg=COLORS['primary']
             )
 
-    # ========================================================
-    # Load Existing Item
-    # ========================================================
+    # ====================================================
+    # LOAD DATA
+    # ====================================================
 
     def _load_data(self):
 
@@ -544,37 +533,29 @@ class AddEditWindow(tk.Toplevel):
 
         if item.get('photo_path'):
 
-            self.result_photo = item[
-                'photo_path'
-            ]
+            self.result_photo = item['photo_path']
 
             self.photo_label.config(
                 text=(
-                    "Attached: "
-                    f"{item['photo_path'].replace(chr(92), '/').split('/')[-1]}"
-                ),
-                fg=COLORS['primary']
+                    'Attached: '
+                    + item['photo_path'].split('/')[-1]
+                )
             )
 
-    # ========================================================
-    # Save
-    # ========================================================
+    # ====================================================
+    # SAVE
+    # ====================================================
 
     def _save(self):
 
-        name = self.vars[
-            'name'
-        ].get().strip()
-
-        room = self.vars[
-            'room'
-        ].get().strip()
+        name = self.vars['name'].get().strip()
+        room = self.vars['room'].get().strip()
 
         if not name or not room:
 
             messagebox.showerror(
-                "Required",
-                "Name and Room are required.",
+                'Required',
+                'Name and Room are required.',
                 parent=self
             )
 
@@ -584,20 +565,12 @@ class AddEditWindow(tk.Toplevel):
             'name': name,
             'category': self.vars['cat'].get(),
             'room': room,
-            'container': self.vars[
-                'container'
-            ].get().strip(),
+            'container': self.vars['container'].get().strip(),
             'status': self.status_var.get(),
-            'person': self.vars[
-                'person'
-            ].get().strip(),
-            'due_date': self.vars[
-                'due'
-            ].get().strip(),
+            'person': self.vars['person'].get().strip(),
+            'due_date': self.vars['due'].get().strip(),
             'photo_path': self.result_photo,
-            'tags': self.vars[
-                'tags'
-            ].get().strip(),
+            'tags': self.vars['tags'].get().strip(),
             'notes': self.notes_text.get(
                 '1.0',
                 'end'
