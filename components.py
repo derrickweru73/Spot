@@ -361,8 +361,14 @@ class StatCard(tk.Frame):
             pady=14,
             highlightbackground=COLORS['border'],
             highlightthickness=1,
-            cursor='hand2' if command else ''
+            **kwargs
         )
+
+        self.command = command
+
+        # ------------------------------------------------
+        # Top section
+        # ------------------------------------------------
 
         top = tk.Frame(
             self,
@@ -372,6 +378,10 @@ class StatCard(tk.Frame):
         top.pack(
             fill='x'
         )
+
+        # ------------------------------------------------
+        # Icon
+        # ------------------------------------------------
 
         icon_canvas = tk.Canvas(
             top,
@@ -399,8 +409,12 @@ class StatCard(tk.Frame):
             19,
             text=icon,
             fill=COLORS['text_inverse'],
-            font=('Segoe UI', 11, 'bold')
+            font=('Segoe UI', 12, 'bold')
         )
+
+        # ------------------------------------------------
+        # Label
+        # ------------------------------------------------
 
         info = tk.Frame(
             top,
@@ -424,56 +438,47 @@ class StatCard(tk.Frame):
             anchor='w'
         )
 
-        tk.Label(
+        # ------------------------------------------------
+        # VALUE
+        # ------------------------------------------------
+
+        value_label = tk.Label(
             info,
             text=str(value),
             bg=COLORS['card'],
             fg=COLORS['text'],
-            font=('Segoe UI', 20, 'bold')
-        ).pack(
-            anchor='w'
+            font=('Segoe UI', 22, 'bold')
         )
+
+        value_label.pack(
+            anchor='w',
+            pady=(2, 0)
+        )
+
+        # ------------------------------------------------
+        # Click support
+        # ------------------------------------------------
 
         if command:
 
-            self._bind_click(
-                self,
-                command
+            self.bind(
+                '<Button-1>',
+                lambda event: command()
             )
 
-            self._bind_click(
-                top,
-                command
-            )
+            for child in self.winfo_children():
 
-            self._bind_click(
-                icon_canvas,
-                command
-            )
-
-            self._bind_click(
-                info,
-                command
-            )
-
-            for child in info.winfo_children():
-
-                self._bind_click(
-                    child,
-                    command
+                child.bind(
+                    '<Button-1>',
+                    lambda event: command()
                 )
 
-    @staticmethod
-    def _bind_click(
-        widget,
-        command
-    ):
+                for grandchild in child.winfo_children():
 
-        widget.bind(
-            '<Button-1>',
-            lambda event: command()
-        )
-
+                    grandchild.bind(
+                        '<Button-1>',
+                        lambda event: command()
+                    )
 
 # ============================================================
 # Item Row
