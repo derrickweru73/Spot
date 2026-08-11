@@ -4,7 +4,6 @@ import tkinter as tk
 
 from theme import COLORS, FONTS
 from components import SearchBar, ItemRow, RoundedButton
-from database import get_all_items
 
 
 class LentView(tk.Frame):
@@ -20,9 +19,9 @@ class LentView(tk.Frame):
 
         self._build()
 
-    # ========================================================
-    # Build
-    # ========================================================
+    # ====================================================
+    # BUILD
+    # ====================================================
 
     def _build(self):
 
@@ -34,7 +33,7 @@ class LentView(tk.Frame):
         header.pack(
             fill='x',
             padx=28,
-            pady=(28, 12)
+            pady=(26, 16)
         )
 
         title_frame = tk.Frame(
@@ -48,7 +47,7 @@ class LentView(tk.Frame):
 
         tk.Label(
             title_frame,
-            text="Lent Out",
+            text='Lent Out',
             bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['title']
@@ -58,7 +57,7 @@ class LentView(tk.Frame):
 
         tk.Label(
             title_frame,
-            text="Items currently with other people",
+            text='Items currently with other people',
             bg=COLORS['bg'],
             fg=COLORS['text_muted'],
             font=FONTS['small']
@@ -69,7 +68,7 @@ class LentView(tk.Frame):
 
         RoundedButton(
             header,
-            text="+ Lent Item",
+            text='+ Lent Item',
             command=self._add_lent,
             bg=COLORS['primary'],
             width=110,
@@ -78,9 +77,9 @@ class LentView(tk.Frame):
             side='right'
         )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Search
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         search_frame = tk.Frame(
             self,
@@ -90,13 +89,12 @@ class LentView(tk.Frame):
         search_frame.pack(
             fill='x',
             padx=28,
-            pady=(5, 10)
+            pady=(0, 10)
         )
 
         self.search = SearchBar(
             search_frame,
-            on_search=self._on_search,
-            placeholder="Search lent items, people..."
+            on_search=self._on_search
         )
 
         self.search.pack(
@@ -104,36 +102,9 @@ class LentView(tk.Frame):
             expand=True
         )
 
-        # ----------------------------------------------------
-        # Count
-        # ----------------------------------------------------
-
-        count_frame = tk.Frame(
-            self,
-            bg=COLORS['bg']
-        )
-
-        count_frame.pack(
-            fill='x',
-            padx=28,
-            pady=(4, 8)
-        )
-
-        self.count_label = tk.Label(
-            count_frame,
-            text="",
-            bg=COLORS['bg'],
-            fg=COLORS['text_muted'],
-            font=FONTS['small']
-        )
-
-        self.count_label.pack(
-            anchor='w'
-        )
-
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # List
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         list_container = tk.Frame(
             self,
@@ -144,7 +115,7 @@ class LentView(tk.Frame):
             fill='both',
             expand=True,
             padx=28,
-            pady=(0, 20)
+            pady=(5, 20)
         )
 
         self.canvas = tk.Canvas(
@@ -166,8 +137,7 @@ class LentView(tk.Frame):
 
         self.list_frame.bind(
             '<Configure>',
-            lambda event:
-            self.canvas.configure(
+            lambda event: self.canvas.configure(
                 scrollregion=self.canvas.bbox('all')
             )
         )
@@ -205,21 +175,9 @@ class LentView(tk.Frame):
 
         self._load_items()
 
-    # ========================================================
-    # Resize
-    # ========================================================
-
-    def _on_resize(self, event=None):
-
-        if event:
-            self.canvas.itemconfig(
-                self.canvas_window,
-                width=event.width
-            )
-
-    # ========================================================
-    # Add
-    # ========================================================
+    # ====================================================
+    # ADD
+    # ====================================================
 
     def _add_lent(self):
 
@@ -227,33 +185,29 @@ class LentView(tk.Frame):
             default_status='lent'
         )
 
-    # ========================================================
-    # Search
-    # ========================================================
+    # ====================================================
+    # SEARCH
+    # ====================================================
 
     def _on_search(self, text):
 
         self.search_text = text
         self._load_items()
 
-    # ========================================================
-    # Load
-    # ========================================================
+    # ====================================================
+    # LOAD
+    # ====================================================
 
     def _load_items(self):
 
         for widget in self.list_frame.winfo_children():
             widget.destroy()
 
+        from database import get_all_items
+
         items = get_all_items(
             status='lent',
             search=self.search_text
-        )
-
-        count = len(items)
-
-        self.count_label.config(
-            text=f"{count} item{'s' if count != 1 else ''} lent out"
         )
 
         if not items:
@@ -272,7 +226,7 @@ class LentView(tk.Frame):
 
             tk.Label(
                 empty,
-                text="Nothing lent out",
+                text='Nothing lent out',
                 bg=COLORS['card'],
                 fg=COLORS['text'],
                 font=FONTS['body_bold']
@@ -282,7 +236,7 @@ class LentView(tk.Frame):
 
             tk.Label(
                 empty,
-                text="Your items are all with you.",
+                text='Your items are all safely with you.',
                 bg=COLORS['card'],
                 fg=COLORS['text_muted'],
                 font=FONTS['small']
@@ -302,12 +256,24 @@ class LentView(tk.Frame):
 
             row.pack(
                 fill='x',
-                pady=(0, 7)
+                pady=(0, 6)
             )
 
-    # ========================================================
-    # Mouse Wheel
-    # ========================================================
+    # ====================================================
+    # RESIZE
+    # ====================================================
+
+    def _on_resize(self, event=None):
+
+        if event:
+            self.canvas.itemconfig(
+                self.canvas_window,
+                width=event.width
+            )
+
+    # ====================================================
+    # MOUSE WHEEL
+    # ====================================================
 
     def _on_mousewheel(self, event):
 
@@ -316,9 +282,9 @@ class LentView(tk.Frame):
             'units'
         )
 
-    # ========================================================
-    # Refresh
-    # ========================================================
+    # ====================================================
+    # REFRESH
+    # ====================================================
 
     def refresh(self):
 
