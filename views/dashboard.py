@@ -181,13 +181,21 @@ class DashboardView(tk.Frame):
         reminders = []
         for item in items:
             if item.get('due_date') and item['status'] in ('lent', 'borrowed'):
-                try:
-                    due = datetime.strptime(item['due_date'], '%Y-%m-%d %H:%M')
-                    delta = (due - now).days
-                    if delta <= 3:
-                        reminders.append((item, delta))
-                except ValueError:
-                    pass
+                due = None
+                # Try multiple date formats
+                for fmt in ('%Y-%m-%d %H:%M', '%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
+                    try:
+                        due = datetime.strptime(item['due_date'].strip(), fmt)
+                        break
+                    except ValueError:
+                        continue
+                
+                if due is None:
+                    continue  # Skip unparseable dates
+                
+                delta = (due - now).days
+                if delta <= 3:  # Due within 3 days or overdue
+                    reminders.append((item, delta))
 
         if not reminders:
             tk.Label(self.reminders_container, text="No upcoming reminders",
