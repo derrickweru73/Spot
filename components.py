@@ -730,3 +730,116 @@ class ItemRow(tk.Frame):
                     )
                 except tk.TclError:
                     pass
+# ============================================================
+# Search Bar
+# ============================================================
+
+class SearchBar(tk.Frame):
+
+    def __init__(
+        self,
+        parent,
+        on_search=None,
+        placeholder='Search...',
+        **kwargs
+    ):
+
+        super().__init__(
+            parent,
+            bg=COLORS['bg'],
+            **kwargs
+        )
+
+        self.on_search = on_search
+        self.placeholder = placeholder
+
+        self.entry = tk.Entry(
+            self,
+            font=FONTS['body'],
+            bg=COLORS['input_bg'],
+            fg=COLORS['text_muted'],
+            insertbackground=COLORS['text'],
+            relief='flat',
+            highlightthickness=1,
+            highlightcolor=COLORS['primary'],
+            highlightbackground=COLORS['border']
+        )
+
+        self.entry.pack(
+            side='left',
+            fill='x',
+            expand=True,
+            ipady=8,
+            padx=(0, 8)
+        )
+
+        self.entry.insert(
+            0,
+            placeholder
+        )
+
+        self.entry.bind(
+            '<FocusIn>',
+            self._on_focus_in
+        )
+
+        self.entry.bind(
+            '<FocusOut>',
+            self._on_focus_out
+        )
+
+        self.entry.bind(
+            '<KeyRelease>',
+            self._on_key
+        )
+
+    def _on_focus_in(self, _):
+
+        if self.entry.get() == self.placeholder:
+
+            self.entry.delete(
+                0,
+                'end'
+            )
+
+            self.entry.config(
+                fg=COLORS['text']
+            )
+
+    def _on_focus_out(self, _):
+
+        if not self.entry.get().strip():
+
+            self.entry.delete(
+                0,
+                'end'
+            )
+
+            self.entry.insert(
+                0,
+                self.placeholder
+            )
+
+            self.entry.config(
+                fg=COLORS['text_muted']
+            )
+
+    def _on_key(self, _):
+
+        if self.on_search:
+
+            text = self.entry.get()
+
+            if text == self.placeholder:
+                text = ''
+
+            self.on_search(text)
+
+    def get(self):
+
+        text = self.entry.get()
+
+        if text == self.placeholder:
+            return ''
+
+        return text
