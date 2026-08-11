@@ -1,75 +1,326 @@
 """Borrowed view with search and due date tracking."""
 
 import tkinter as tk
+
 from theme import COLORS, FONTS
 from components import SearchBar, ItemRow, RoundedButton
+from database import get_all_items
 
 
 class BorrowedView(tk.Frame):
+
     def __init__(self, parent, controller):
-        super().__init__(parent, bg=COLORS['bg'])
+        super().__init__(
+            parent,
+            bg=COLORS['bg']
+        )
+
         self.controller = controller
         self.search_text = ''
+
         self._build()
 
+    # ========================================================
+    # Build
+    # ========================================================
+
     def _build(self):
-        header = tk.Frame(self, bg=COLORS['bg'])
-        header.pack(fill='x', padx=20, pady=(20, 10))
-        tk.Label(header, text="Borrowed", bg=COLORS['bg'],
-                 font=FONTS['title'], fg=COLORS['text']).pack(side='left')
-        RoundedButton(header, text="+ Borrowed", command=self._add_borrowed,
-                      bg=COLORS['info'], width=110).pack(side='right')
 
-        bar = tk.Frame(self, bg=COLORS['bg'])
-        bar.pack(fill='x', padx=20, pady=5)
-        self.search = SearchBar(bar, on_search=self._on_search)
-        self.search.pack(fill='x', expand=True)
+        header = tk.Frame(
+            self,
+            bg=COLORS['bg']
+        )
 
-        self.canvas = tk.Canvas(self, bg=COLORS['bg'], highlightthickness=0)
-        self.scrollbar = tk.Scrollbar(self, orient='vertical', command=self.canvas.yview)
-        self.list_frame = tk.Frame(self.canvas, bg=COLORS['border'])
+        header.pack(
+            fill='x',
+            padx=28,
+            pady=(28, 12)
+        )
 
-        self.list_frame.bind('<Configure>',
-                             lambda e: self.canvas.configure(scrollregion=self.canvas.bbox('all')))
-        self.canvas.create_window((0, 0), window=self.list_frame, anchor='nw')
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        title_frame = tk.Frame(
+            header,
+            bg=COLORS['bg']
+        )
 
-        self.canvas.pack(side='left', fill='both', expand=True, padx=20, pady=10)
-        self.scrollbar.pack(side='right', fill='y')
+        title_frame.pack(
+            side='left'
+        )
 
-        self.canvas.bind_all('<MouseWheel>',
-                             lambda e: self.canvas.yview_scroll(int(-1*(e.delta/120)), 'units'))
-        self.bind('<Configure>', self._on_resize)
+        tk.Label(
+            title_frame,
+            text="Borrowed",
+            bg=COLORS['bg'],
+            fg=COLORS['text'],
+            font=FONTS['title']
+        ).pack(
+            anchor='w'
+        )
+
+        tk.Label(
+            title_frame,
+            text="Items you've borrowed from others",
+            bg=COLORS['bg'],
+            fg=COLORS['text_muted'],
+            font=FONTS['small']
+        ).pack(
+            anchor='w',
+            pady=(3, 0)
+        )
+
+        RoundedButton(
+            header,
+            text="+ Borrowed",
+            command=self._add_borrowed,
+            bg=COLORS['secondary'],
+            width=110,
+            height=36
+        ).pack(
+            side='right'
+        )
+
+        # ----------------------------------------------------
+        # Search
+        # ----------------------------------------------------
+
+        search_frame = tk.Frame(
+            self,
+            bg=COLORS['bg']
+        )
+
+        search_frame.pack(
+            fill='x',
+            padx=28,
+            pady=(5, 10)
+        )
+
+        self.search = SearchBar(
+            search_frame,
+            on_search=self._on_search,
+            placeholder="Search borrowed items, people..."
+        )
+
+        self.search.pack(
+            fill='x',
+            expand=True
+        )
+
+        # ----------------------------------------------------
+        # Count
+        # ----------------------------------------------------
+
+        count_frame = tk.Frame(
+            self,
+            bg=COLORS['bg']
+        )
+
+        count_frame.pack(
+            fill='x',
+            padx=28,
+            pady=(4, 8)
+        )
+
+        self.count_label = tk.Label(
+            count_frame,
+            text="",
+            bg=COLORS['bg'],
+            fg=COLORS['text_muted'],
+            font=FONTS['small']
+        )
+
+        self.count_label.pack(
+            anchor='w'
+        )
+
+        # ----------------------------------------------------
+        # List
+        # ----------------------------------------------------
+
+        list_container = tk.Frame(
+            self,
+            bg=COLORS['bg']
+        )
+
+        list_container.pack(
+            fill='both',
+            expand=True,
+            padx=28,
+            pady=(0, 20)
+        )
+
+        self.canvas = tk.Canvas(
+            list_container,
+            bg=COLORS['bg'],
+            highlightthickness=0
+        )
+
+        self.scrollbar = tk.Scrollbar(
+            list_container,
+            orient='vertical',
+            command=self.canvas.yview
+        )
+
+        self.list_frame = tk.Frame(
+            self.canvas,
+            bg=COLORS['bg']
+        )
+
+        self.list_frame.bind(
+            '<Configure>',
+            lambda event:
+            self.canvas.configure(
+                scrollregion=self.canvas.bbox('all')
+            )
+        )
+
+        self.canvas_window = self.canvas.create_window(
+            (0, 0),
+            window=self.list_frame,
+            anchor='nw'
+        )
+
+        self.canvas.configure(
+            yscrollcommand=self.scrollbar.set
+        )
+
+        self.canvas.pack(
+            side='left',
+            fill='both',
+            expand=True
+        )
+
+        self.scrollbar.pack(
+            side='right',
+            fill='y'
+        )
+
+        self.canvas.bind(
+            '<Configure>',
+            self._on_resize
+        )
+
+        self.canvas.bind_all(
+            '<MouseWheel>',
+            self._on_mousewheel
+        )
 
         self._load_items()
 
+    # ========================================================
+    # Resize
+    # ========================================================
+
     def _on_resize(self, event=None):
-        w = self.winfo_width()
-        self.canvas.itemconfig(1, width=max(w-80, 300))
+
+        if event:
+            self.canvas.itemconfig(
+                self.canvas_window,
+                width=event.width
+            )
+
+    # ========================================================
+    # Add
+    # ========================================================
 
     def _add_borrowed(self):
-        self.controller.open_add(default_status='borrowed')
+
+        self.controller.open_add(
+            default_status='borrowed'
+        )
+
+    # ========================================================
+    # Search
+    # ========================================================
 
     def _on_search(self, text):
+
         self.search_text = text
         self._load_items()
 
-    def _load_items(self):
-        for w in self.list_frame.winfo_children():
-            w.destroy()
+    # ========================================================
+    # Load
+    # ========================================================
 
-        from database import get_all_items
-        items = get_all_items(status='borrowed', search=self.search_text)
+    def _load_items(self):
+
+        for widget in self.list_frame.winfo_children():
+            widget.destroy()
+
+        items = get_all_items(
+            status='borrowed',
+            search=self.search_text
+        )
+
+        count = len(items)
+
+        self.count_label.config(
+            text=f"{count} item{'s' if count != 1 else ''} borrowed"
+        )
 
         if not items:
-            tk.Label(self.list_frame, text="Nothing borrowed. Debt free!",
-                     bg=COLORS['card'], font=FONTS['body'], fg=COLORS['text_muted'],
-                     padx=20, pady=40).pack(fill='x')
+
+            empty = tk.Frame(
+                self.list_frame,
+                bg=COLORS['card'],
+                highlightbackground=COLORS['border'],
+                highlightthickness=1
+            )
+
+            empty.pack(
+                fill='x',
+                pady=5
+            )
+
+            tk.Label(
+                empty,
+                text="Nothing borrowed",
+                bg=COLORS['card'],
+                fg=COLORS['text'],
+                font=FONTS['body_bold']
+            ).pack(
+                pady=(30, 4)
+            )
+
+            tk.Label(
+                empty,
+                text="You're not currently borrowing anything.",
+                bg=COLORS['card'],
+                fg=COLORS['text_muted'],
+                font=FONTS['small']
+            ).pack(
+                pady=(0, 30)
+            )
+
             return
 
         for item in items:
-            row = ItemRow(self.list_frame, item, on_click=self.controller.open_detail)
-            row.pack(fill='x', pady=(0, 1))
+
+            row = ItemRow(
+                self.list_frame,
+                item,
+                on_click=self.controller.open_detail
+            )
+
+            row.pack(
+                fill='x',
+                pady=(0, 7)
+            )
+
+    # ========================================================
+    # Mouse Wheel
+    # ========================================================
+
+    def _on_mousewheel(self, event):
+
+        self.canvas.yview_scroll(
+            int(-1 * (event.delta / 120),
+            ),
+            'units'
+        )
+
+    # ========================================================
+    # Refresh
+    # ========================================================
 
     def refresh(self):
+
         self._load_items()
