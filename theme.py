@@ -76,11 +76,4 @@ BREAKPOINTS = {
 }
 
 
-# --- TEST BLOCK (remove after testing) ---
-# if __name__ == "__main__":
-#     print("Theme loaded!")
-#     print("Background color:", COLORS['bg'])
-#     print("Primary color:", COLORS['primary'])
-#     print("Title font:", FONTS['title'])
-#     print("Success status:", STATUS_COLORS['stored'])
-#     print("Mobile breakpoint:", BREAKPOINTS['md'], "px")feat
+ 
