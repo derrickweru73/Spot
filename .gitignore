@@ -8,3 +8,9 @@ debug_db.py
 backups/
 .DS_Store
 Thumbs.db
+*.py[cod]
+spot.db
+spot_config.ini
+inventory_report.html
+debug_db.py
+backups/
