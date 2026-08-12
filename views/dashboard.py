@@ -2,14 +2,20 @@
 
 import tkinter as tk
 
-from theme import COLORS, FONTS
-from components import StatCard, ItemRow, RoundedButton, SearchBar
+from theme import COLORS, FONTS, DARK_MODE
+from components import (
+    StatCard,
+    ItemRow,
+    RoundedButton,
+    SearchBar
+)
 from database import get_stats, get_all_items
 
 
 class DashboardView(tk.Frame):
 
     def __init__(self, parent, controller):
+
         super().__init__(
             parent,
             bg=COLORS['bg']
@@ -45,7 +51,8 @@ class DashboardView(tk.Frame):
 
         self.container.bind(
             '<Configure>',
-            lambda event: self.canvas.configure(
+            lambda event:
+            self.canvas.configure(
                 scrollregion=self.canvas.bbox('all')
             )
         )
@@ -136,15 +143,51 @@ class DashboardView(tk.Frame):
             pady=(3, 0)
         )
 
-        RoundedButton(
+        # ------------------------------------------------
+        # Header Actions
+        # ------------------------------------------------
+
+        actions = tk.Frame(
             header,
+            bg=COLORS['bg']
+        )
+
+        actions.pack(
+            side='right'
+        )
+
+        # Sun / Moon toggle
+        self.theme_button = tk.Button(
+            actions,
+            text='☀' if DARK_MODE else '☾',
+            command=self.controller.toggle_theme,
+            bg=COLORS['card'],
+            fg=COLORS['text'],
+            activebackground=COLORS['card_hover'],
+            activeforeground=COLORS['text'],
+            relief='flat',
+            borderwidth=0,
+            cursor='hand2',
+            font=('Segoe UI Symbol', 16),
+            width=3,
+            height=1
+        )
+
+        self.theme_button.pack(
+            side='left',
+            padx=(0, 8)
+        )
+
+        # Add Item
+        RoundedButton(
+            actions,
             text='+ Add Item',
             command=self.controller.open_add,
             bg=COLORS['primary'],
             width=105,
             height=36
         ).pack(
-            side='right'
+            side='left'
         )
 
         # ------------------------------------------------
@@ -205,8 +248,13 @@ class DashboardView(tk.Frame):
             weight=2
         )
 
-        self._build_recent_items(self.sections)
-        self._build_reminders(self.sections)
+        self._build_recent_items(
+            self.sections
+        )
+
+        self._build_reminders(
+            self.sections
+        )
 
     # ====================================================
     # STATISTICS
@@ -227,6 +275,7 @@ class DashboardView(tk.Frame):
         )
 
         for column in range(4):
+
             stats_frame.grid_columnconfigure(
                 column,
                 weight=1
@@ -245,21 +294,24 @@ class DashboardView(tk.Frame):
                 'Available',
                 stats['stored'],
                 COLORS['success'],
-                lambda: self.controller.show_view('stash')
+                lambda:
+                self.controller.show_view('stash')
             ),
             (
                 '↗',
                 'Lent Out',
                 stats['lent'],
                 COLORS['stat_lent'],
-                lambda: self.controller.show_view('lent')
+                lambda:
+                self.controller.show_view('lent')
             ),
             (
                 '↙',
                 'Borrowed',
                 stats['borrowed'],
                 COLORS['stat_borrowed'],
-                lambda: self.controller.show_view('borrowed')
+                lambda:
+                self.controller.show_view('borrowed')
             )
         ]
 
@@ -283,16 +335,21 @@ class DashboardView(tk.Frame):
     # ====================================================
     # RECENT ITEMS
     # ====================================================
-    
+
     def _on_search(self, text):
 
         self.search_text = text
 
-        if hasattr(self, 'recent_section'):
+        if hasattr(
+            self,
+            'recent_section'
+        ):
+
             self.recent_section.destroy()
 
-        self._build_recent_items(self.sections)
-
+        self._build_recent_items(
+            self.sections
+        )
 
     def _build_recent_items(self, parent):
 
@@ -334,7 +391,8 @@ class DashboardView(tk.Frame):
         tk.Button(
             header,
             text='View all',
-            command=lambda: self.controller.show_view('stash'),
+            command=lambda:
+            self.controller.show_view('stash'),
             bg=COLORS['card'],
             fg=COLORS['primary'],
             activebackground=COLORS['card'],
@@ -348,7 +406,11 @@ class DashboardView(tk.Frame):
         )
 
         items = get_all_items(
-            search=getattr(self, 'search_text', ''),
+            search=getattr(
+                self,
+                'search_text',
+                ''
+            ),
             limit=5
         )
 
@@ -428,17 +490,18 @@ class DashboardView(tk.Frame):
             bg=COLORS['card'],
             fg=COLORS['text'],
             font=FONTS['heading']
-        ).pack(side='left')
+        ).pack(
+            side='left'
+        )
 
-        # Get all items with due dates
         reminder_items = self._get_reminder_items()
 
         overdue_count = sum(
-            1 for item in reminder_items
+            1
+            for item in reminder_items
             if item.get('is_overdue')
         )
 
-        # Badge shows overdue count
         badge_color = (
             COLORS['danger']
             if overdue_count > 0
@@ -453,7 +516,9 @@ class DashboardView(tk.Frame):
             font=FONTS['small_bold'],
             padx=7,
             pady=2
-        ).pack(side='right')
+        ).pack(
+            side='right'
+        )
 
         reminder_frame = tk.Frame(
             section,
@@ -515,13 +580,21 @@ class DashboardView(tk.Frame):
             ).pack(
                 pady=(3, 0)
             )
+
     # ====================================================
     # REMINDER ITEM
     # ====================================================
 
-    def _create_reminder(self, parent, item):
+    def _create_reminder(
+        self,
+        parent,
+        item
+    ):
 
-        overdue = item.get('is_overdue', False)
+        overdue = item.get(
+            'is_overdue',
+            False
+        )
 
         accent = (
             COLORS['danger']
@@ -575,9 +648,13 @@ class DashboardView(tk.Frame):
             bg=COLORS['bg'],
             fg=COLORS['text'],
             font=FONTS['body_bold']
-        ).pack(anchor='w')
+        ).pack(
+            anchor='w'
+        )
 
-        person = item.get('person') or 'Unknown'
+        person = item.get(
+            'person'
+        ) or 'Unknown'
 
         tk.Label(
             info,
@@ -590,9 +667,15 @@ class DashboardView(tk.Frame):
             pady=(2, 0)
         )
 
-        due = item.get('due_date') or ''
+        due = item.get(
+            'due_date'
+        ) or ''
 
-        due_label = 'Overdue' if overdue else 'Due'
+        due_label = (
+            'Overdue'
+            if overdue
+            else 'Due'
+        )
 
         tk.Label(
             frame,
@@ -629,40 +712,54 @@ class DashboardView(tk.Frame):
         from datetime import datetime
 
         items = get_all_items()
+
         now = datetime.now()
 
         reminders = []
 
         for item in items:
 
-            due_date = item.get('due_date')
+            due_date = item.get(
+                'due_date'
+            )
 
             if not due_date:
                 continue
 
-            # Only lent and borrowed items need reminders
-            if item.get('status') not in ('lent', 'borrowed'):
+            if item.get(
+                'status'
+            ) not in (
+                'lent',
+                'borrowed'
+            ):
                 continue
 
             try:
 
-                due = datetime.fromisoformat(due_date)
+                due = datetime.fromisoformat(
+                    due_date
+                )
 
                 item = item.copy()
 
-                # Mark whether this item is overdue
-                item['is_overdue'] = due < now
+                item['is_overdue'] = (
+                    due < now
+                )
 
-                reminders.append(item)
+                reminders.append(
+                    item
+                )
 
             except ValueError:
                 continue
 
-        # Overdue first, then upcoming dates
         reminders.sort(
             key=lambda item: (
                 not item['is_overdue'],
-                item.get('due_date', '')
+                item.get(
+                    'due_date',
+                    ''
+                )
             )
         )
 
@@ -672,7 +769,10 @@ class DashboardView(tk.Frame):
     # RESPONSIVE
     # ====================================================
 
-    def _resize_container(self, event):
+    def _resize_container(
+        self,
+        event
+    ):
 
         self.canvas.itemconfig(
             self.canvas_window,
@@ -683,10 +783,16 @@ class DashboardView(tk.Frame):
     # MOUSE WHEEL
     # ====================================================
 
-    def _on_mousewheel(self, event):
+    def _on_mousewheel(
+        self,
+        event
+    ):
 
         self.canvas.yview_scroll(
-            int(-1 * (event.delta / 120)),
+            int(
+                -1 *
+                (event.delta / 120)
+            ),
             'units'
         )
 

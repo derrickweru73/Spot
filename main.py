@@ -3,9 +3,20 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 
-from theme import COLORS, FONTS, BREAKPOINTS
+from theme import (
+    COLORS,
+    FONTS,
+    BREAKPOINTS,
+    toggle_dark_mode
+)
+
 from components import RoundedButton
-from database import delete_item, export_to_csv, get_stats
+
+from database import (
+    delete_item,
+    export_to_csv,
+    get_stats
+)
 
 from views.dashboard import DashboardView
 from views.stash_view import StashView
@@ -21,17 +32,20 @@ class SpotApp(tk.Tk):
         self.title("Spot - Personal Inventory")
         self.geometry("1200x720")
         self.minsize(900, 600)
-        self.configure(bg=COLORS['bg'])
 
         self.current_view = None
         self.current_view_name = None
 
+        self.configure(
+            bg=COLORS['bg']
+        )
+
         self._build_layout()
         self.show_view("dashboard")
 
-    # ========================================================
-    # Main Layout
-    # ========================================================
+    # ====================================================
+    # MAIN LAYOUT
+    # ====================================================
 
     def _build_layout(self):
 
@@ -66,15 +80,15 @@ class SpotApp(tk.Tk):
             self._on_window_resize
         )
 
-    # ========================================================
-    # Sidebar
-    # ========================================================
+    # ====================================================
+    # SIDEBAR
+    # ====================================================
 
     def _build_sidebar(self):
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Logo
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         logo_frame = tk.Frame(
             self.sidebar,
@@ -108,9 +122,9 @@ class SpotApp(tk.Tk):
             pady=(2, 0)
         )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Navigation
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         nav_frame = tk.Frame(
             self.sidebar,
@@ -152,9 +166,9 @@ class SpotApp(tk.Tk):
             "borrowed"
         )
 
-        # ----------------------------------------------------
+        # ------------------------------------------------
         # Bottom stats
-        # ----------------------------------------------------
+        # ------------------------------------------------
 
         bottom = tk.Frame(
             self.sidebar,
@@ -203,6 +217,10 @@ class SpotApp(tk.Tk):
         )
 
         self._refresh_sidebar_stats()
+
+    # ====================================================
+    # NAVIGATION BUTTON
+    # ====================================================
 
     def _create_nav_button(
         self,
@@ -262,6 +280,7 @@ class SpotApp(tk.Tk):
             icon_label,
             text_label
         ):
+
             widget.bind(
                 '<Button-1>',
                 lambda event, v=view_name:
@@ -280,11 +299,15 @@ class SpotApp(tk.Tk):
                 self._nav_hover(v, False)
             )
 
-    # ========================================================
-    # Navigation Styling
-    # ========================================================
+    # ====================================================
+    # NAVIGATION STYLING
+    # ====================================================
 
-    def _nav_hover(self, view_name, entering):
+    def _nav_hover(
+        self,
+        view_name,
+        entering
+    ):
 
         if self.current_view_name == view_name:
             return
@@ -301,7 +324,10 @@ class SpotApp(tk.Tk):
         icon.config(bg=bg)
         label.config(bg=bg)
 
-    def _set_active_nav(self, view_name):
+    def _set_active_nav(
+        self,
+        view_name
+    ):
 
         for name, widgets in self.nav_buttons.items():
 
@@ -339,13 +365,17 @@ class SpotApp(tk.Tk):
                     fg=COLORS['text_dark']
                 )
 
-    # ========================================================
-    # Views
-    # ========================================================
+    # ====================================================
+    # VIEWS
+    # ====================================================
 
-    def show_view(self, view_name):
+    def show_view(
+        self,
+        view_name
+    ):
 
         if self.current_view:
+
             self.current_view.destroy()
 
         view_classes = {
@@ -378,11 +408,77 @@ class SpotApp(tk.Tk):
 
         self._refresh_sidebar_stats()
 
-    # ========================================================
-    # Add / Edit
-    # ========================================================
+    # ====================================================
+    # DARK / LIGHT MODE
+    # ====================================================
 
-    def open_add(self, default_status='stored'):
+    def toggle_theme(self):
+
+        toggle_dark_mode()
+
+        # Update main window background
+        self.configure(
+            bg=COLORS['bg']
+        )
+
+        # Rebuild sidebar
+        self.sidebar.destroy()
+
+        self.sidebar = tk.Frame(
+            self,
+            bg=COLORS['sidebar'],
+            width=220
+        )
+
+        self.sidebar.pack(
+            side='left',
+            fill='y'
+        )
+
+        self.sidebar.pack_propagate(False)
+
+        self._build_sidebar()
+
+        # Rebuild current view
+        if self.current_view:
+            self.current_view.destroy()
+
+        view_classes = {
+            'dashboard': DashboardView,
+            'stash': StashView,
+            'lent': LentView,
+            'borrowed': BorrowedView
+        }
+
+        view_class = view_classes.get(
+            self.current_view_name,
+            DashboardView
+        )
+
+        self.current_view = view_class(
+            self.content,
+            self
+        )
+
+        self.current_view.pack(
+            fill='both',
+            expand=True
+        )
+
+        self._set_active_nav(
+            self.current_view_name
+        )
+
+        self._refresh_sidebar_stats()
+
+    # ====================================================
+    # ADD / EDIT
+    # ====================================================
+
+    def open_add(
+        self,
+        default_status='stored'
+    ):
 
         from views.add_edit import AddEditWindow
 
@@ -392,7 +488,14 @@ class SpotApp(tk.Tk):
             default_status=default_status
         )
 
-    def open_detail(self, item):
+    # ====================================================
+    # ITEM DETAIL
+    # ====================================================
+
+    def open_detail(
+        self,
+        item
+    ):
 
         from views.item_detail import ItemDetailWindow
 
@@ -402,16 +505,20 @@ class SpotApp(tk.Tk):
             item['id']
         )
 
-    # ========================================================
-    # Refresh
-    # ========================================================
+    # ====================================================
+    # REFRESH
+    # ====================================================
 
     def refresh_current_view(self):
 
-        if self.current_view and hasattr(
-            self.current_view,
-            'refresh'
+        if (
+            self.current_view
+            and hasattr(
+                self.current_view,
+                'refresh'
+            )
         ):
+
             self.current_view.refresh()
 
         self._refresh_sidebar_stats()
@@ -419,24 +526,31 @@ class SpotApp(tk.Tk):
     def _refresh_sidebar_stats(self):
 
         try:
+
             stats = get_stats()
 
             self.total_items_label.config(
-                text=str(stats['total']),
+                text=str(
+                    stats['total']
+                ),
                 fg=COLORS['text']
             )
 
         except Exception:
+
             self.total_items_label.config(
                 text="0",
                 fg=COLORS['text']
             )
 
-    # ========================================================
-    # Delete
-    # ========================================================
+    # ====================================================
+    # DELETE
+    # ====================================================
 
-    def delete_item(self, item_id):
+    def delete_item(
+        self,
+        item_id
+    ):
 
         answer = messagebox.askyesno(
             "Delete Item",
@@ -446,13 +560,15 @@ class SpotApp(tk.Tk):
         if not answer:
             return
 
-        delete_item(item_id)
+        delete_item(
+            item_id
+        )
 
         self.refresh_current_view()
 
-    # ========================================================
-    # Export
-    # ========================================================
+    # ====================================================
+    # EXPORT
+    # ====================================================
 
     def export_items(self):
 
@@ -469,7 +585,10 @@ class SpotApp(tk.Tk):
             return
 
         try:
-            export_to_csv(filepath)
+
+            export_to_csv(
+                filepath
+            )
 
             messagebox.showinfo(
                 "Export Complete",
@@ -483,11 +602,14 @@ class SpotApp(tk.Tk):
                 f"Could not export inventory:\n\n{exc}"
             )
 
-    # ========================================================
-    # Responsive Sidebar
-    # ========================================================
+    # ====================================================
+    # RESPONSIVE SIDEBAR
+    # ====================================================
 
-    def _on_window_resize(self, event):
+    def _on_window_resize(
+        self,
+        event
+    ):
 
         if event.widget != self:
             return
@@ -508,9 +630,10 @@ class SpotApp(tk.Tk):
 
 
 # ============================================================
-# Run Application
+# RUN APPLICATION
 # ============================================================
 
 if __name__ == "__main__":
+
     app = SpotApp()
     app.mainloop()
