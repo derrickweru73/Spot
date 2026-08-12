@@ -4,10 +4,8 @@ import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'spot.db'
-)
+
+from config import DB_PATH
 
 
 # ============================================================
@@ -50,7 +48,9 @@ def init_db():
             due_date TEXT,
             photo_path TEXT,
             tags TEXT,
-            notes TEXT
+            notes TEXT,
+            is_deleted INTEGER DEFAULT 0,
+            deleted_at TEXT
         )
     ''')
 
@@ -101,7 +101,8 @@ def add_item(data: dict) -> int:
             due_date,
             photo_path,
             tags,
-            notes
+            notes,
+            is_deleted
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
@@ -115,7 +116,8 @@ def add_item(data: dict) -> int:
         data.get('due_date', ''),
         data.get('photo_path', ''),
         data.get('tags', ''),
-        data.get('notes', '')
+        data.get('notes', ''),
+        0
     ))
 
     item_id = c.lastrowid
@@ -163,7 +165,7 @@ def get_all_items(
     query = '''
         SELECT *
         FROM items
-        WHERE 1=1
+        WHERE is_deleted = 0
     '''
 
     params = []
@@ -372,18 +374,82 @@ def update_item(item_id: int, data: dict):
 # DELETE ITEM
 # ============================================================
 
-def delete_item(item_id: int):
-
+def soft_delete_item(item_id: int):
     conn = get_connection()
     c = conn.cursor()
-
-    c.execute(
-        'DELETE FROM items WHERE id = ?',
-        (item_id,)
-    )
-
+    now = datetime.now().isoformat(sep=' ', timespec='minutes')
+    c.execute('UPDATE items SET is_deleted = 1, deleted_at = ? WHERE id = ?', (now, item_id))
     conn.commit()
     conn.close()
+
+
+def restore_item(item_id: int):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('UPDATE items SET is_deleted = 0, deleted_at = NULL WHERE id = ?', (item_id,))
+    conn.commit()
+    conn.close()
+
+
+def permanently_delete_item(item_id: int):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('DELETE FROM items WHERE id = ?', (item_id,))
+    conn.commit()
+    conn.close()
+
+
+def get_deleted_items(search=None):
+    conn = get_connection()
+    c = conn.cursor()
+    query = 'SELECT * FROM items WHERE is_deleted = 1 ORDER BY deleted_at DESC'
+    params = []
+    if search:
+        query = 'SELECT * FROM items WHERE is_deleted = 1 AND (name LIKE ? OR tags LIKE ?) ORDER BY deleted_at DESC'
+        like = f'%{search}%'
+        params = [like, like]
+    c.execute(query, params)
+    rows = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return rows
+
+
+def advanced_search(search=None, status=None, room=None, category=None,
+                    person=None, date_from=None, date_to=None, tags=None):
+    conn = get_connection()
+    c = conn.cursor()
+    query = 'SELECT * FROM items WHERE is_deleted = 0'
+    params = []
+    if search:
+        query += ' AND (name LIKE ? OR tags LIKE ? OR room LIKE ? OR container LIKE ? OR person LIKE ? OR notes LIKE ?)'
+        like = f'%{search}%'
+        params.extend([like, like, like, like, like, like])
+    if status:
+        query += ' AND status = ?'
+        params.append(status)
+    if room:
+        query += ' AND room = ?'
+        params.append(room)
+    if category:
+        query += ' AND category = ?'
+        params.append(category)
+    if person:
+        query += ' AND person LIKE ?'
+        params.append(f'%{person}%')
+    if date_from:
+        query += ' AND due_date >= ?'
+        params.append(date_from)
+    if date_to:
+        query += ' AND due_date <= ?'
+        params.append(date_to)
+    if tags:
+        query += ' AND tags LIKE ?'
+        params.append(f'%{tags}%')
+    query += ' ORDER BY date_added DESC'
+    c.execute(query, params)
+    rows = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return rows
 
 
 # ============================================================
@@ -507,25 +573,25 @@ def get_stats():
     c = conn.cursor()
 
     c.execute(
-        "SELECT COUNT(*) FROM items WHERE status='stored'"
+        "SELECT COUNT(*) FROM items WHERE status='stored' AND is_deleted"
     )
 
     stored = c.fetchone()[0]
 
     c.execute(
-        "SELECT COUNT(*) FROM items WHERE status='lent'"
+        "SELECT COUNT(*) FROM items WHERE status='lent'AND is_deleted"
     )
 
     lent = c.fetchone()[0]
 
     c.execute(
-        "SELECT COUNT(*) FROM items WHERE status='borrowed'"
+        "SELECT COUNT(*) FROM items WHERE status='borrowed'AND is_deleted"
     )
 
     borrowed = c.fetchone()[0]
 
     c.execute(
-        "SELECT COUNT(*) FROM items WHERE status='lost'"
+        "SELECT COUNT(*) FROM items WHERE status='lost'AND is_deleted"
     )
 
     lost = c.fetchone()[0]
@@ -552,6 +618,14 @@ def get_stats():
 
     total = c.fetchone()[0]
 
+
+
+    c.execute("SELECT category, COUNT(*) FROM items WHERE is_deleted=0 GROUP BY category")
+    categories = {row[0] or 'General': row[1] for row in c.fetchall()}
+
+    c.execute("SELECT room, COUNT(*) FROM items WHERE is_deleted=0 GROUP BY room")
+    rooms = {row[0] or 'Unknown': row[1] for row in c.fetchall()}
+
     conn.close()
 
     return {
@@ -560,7 +634,9 @@ def get_stats():
         'borrowed': borrowed,
         'lost': lost,
         'overdue': overdue,
-        'total': total
+        'total': total,
+        'categories': categories,
+        'rooms': rooms
     }
 
 
@@ -573,9 +649,7 @@ def get_rooms():
     conn = get_connection()
     c = conn.cursor()
 
-    c.execute(
-        "SELECT DISTINCT room FROM items ORDER BY room"
-    )
+    c.execute("SELECT DISTINCT room FROM items WHERE is_deleted=0 ORDER BY room")
 
     rooms = [
         row[0]
@@ -599,9 +673,7 @@ def export_to_csv(filepath: str):
     conn = get_connection()
     c = conn.cursor()
 
-    c.execute(
-        'SELECT * FROM items ORDER BY date_added DESC'
-    )
+    c.execute('SELECT * FROM items WHERE is_deleted=0 ORDER BY date_added DESC')
 
     rows = c.fetchall()
 
