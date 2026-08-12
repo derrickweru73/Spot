@@ -1,72 +1,35 @@
 """Spot color palette and typography."""
 
-COLORS = {
-
-    # ====================================================
-    # Core Interface
-    # ====================================================
-
+LIGHT_COLORS = {
     'bg': '#FAF8FF',
+    'card': '#FFFFFF',
+    'card_hover': '#E8EAF8',
+
     'sidebar': '#F2F3FF',
     'sidebar_hover': '#E8EAF8',
     'sidebar_active': '#FF7A00',
 
-    # ====================================================
-    # Cards
-    # ====================================================
-
-    'card': '#FFFFFF',
-    'card_hover': '#F9FAFB',
-
-    # ====================================================
-    # Inputs
-    # ====================================================
-
     'input_bg': '#F9FAFB',
     'popup_bg': '#FFFFFF',
 
-    # ====================================================
-    # Borders
-    # ====================================================
-
     'border': '#E5E7EB',
-    'border_light': '#E5E7EB',
-
-    # ====================================================
-    # Primary
-    # ====================================================
+    'border_light': '#D3D5E0',
 
     'primary': '#FF7A00',
     'primary_hover': '#E56D00',
 
-    # ====================================================
-    # Secondary
-    # ====================================================
-
     'secondary': '#00A3FF',
     'secondary_hover': '#008EDB',
-
-    # ====================================================
-    # Functional
-    # ====================================================
 
     'success': '#2EB872',
     'warning': '#FF7A00',
     'danger': '#E53935',
     'info': '#00A3FF',
 
-    # ====================================================
-    # Statistics
-    # ====================================================
-
     'stat_total': '#00A3FF',
     'stat_lost': '#E53935',
     'stat_lent': '#FF7A00',
     'stat_borrowed': '#2EB872',
-
-    # ====================================================
-    # Text
-    # ====================================================
 
     'text': '#1A1B21',
     'text_muted': '#6B7280',
@@ -75,95 +38,113 @@ COLORS = {
 }
 
 
-# ========================================================
-# Typography
-# ========================================================
+DARK_COLORS = {
+    'bg': '#111318',
+    'card': '#1B1E26',
+    'card_hover': '#252934',
 
-FONTS = {
+    'sidebar': '#181B22',
+    'sidebar_hover': '#252934',
+    'sidebar_active': '#FF7A00',
 
-    'logo': (
-        'Segoe UI',
-        20,
-        'bold'
-    ),
+    'input_bg': '#20232B',
+    'popup_bg': '#1B1E26',
 
-    'title': (
-        'Segoe UI',
-        18,
-        'bold'
-    ),
+    'border': '#30343D',
+    'border_light': '#3A3E48',
 
-    'heading': (
-        'Segoe UI',
-        13,
-        'bold'
-    ),
+    'primary': '#FF7A00',
+    'primary_hover': '#E56D00',
 
-    'body': (
-        'Segoe UI',
-        10
-    ),
+    'secondary': '#00A3FF',
+    'secondary_hover': '#008EDB',
 
-    'body_bold': (
-        'Segoe UI',
-        10,
-        'bold'
-    ),
+    'success': '#2EB872',
+    'warning': '#FF7A00',
+    'danger': '#E53935',
+    'info': '#00A3FF',
 
-    'small': (
-        'Segoe UI',
-        9
-    ),
+    'stat_total': '#00A3FF',
+    'stat_lost': '#E53935',
+    'stat_lent': '#FF7A00',
+    'stat_borrowed': '#2EB872',
 
-    'small_bold': (
-        'Segoe UI',
-        9,
-        'bold'
-    ),
-
-    'button': (
-        'Segoe UI',
-        10,
-        'bold'
-    ),
-
-    'badge': (
-        'Segoe UI',
-        8,
-        'bold'
-    ),
+    'text': '#F5F5F7',
+    'text_muted': '#A5A8B2',
+    'text_dark': '#D5D7DE',
+    'text_inverse': '#FFFFFF',
 }
 
 
-# ========================================================
-# Status Colors
-# ========================================================
+# Current theme
+DARK_MODE = False
+
+COLORS = LIGHT_COLORS.copy()
+
+
+def toggle_dark_mode():
+    """Switch between light and dark mode."""
+
+    global DARK_MODE, COLORS
+
+    DARK_MODE = not DARK_MODE
+
+    if DARK_MODE:
+        COLORS.clear()
+        COLORS.update(DARK_COLORS)
+    else:
+        COLORS.clear()
+        COLORS.update(LIGHT_COLORS)
+
+    return DARK_MODE
+
+
+def set_dark_mode(enabled):
+    """Set dark mode explicitly."""
+
+    global DARK_MODE, COLORS
+
+    DARK_MODE = enabled
+
+    COLORS.clear()
+
+    if DARK_MODE:
+        COLORS.update(DARK_COLORS)
+    else:
+        COLORS.update(LIGHT_COLORS)
+
+
+FONTS = {
+    'logo': ('Segoe UI', 20, 'bold'),
+    'title': ('Segoe UI', 18, 'bold'),
+    'heading': ('Segoe UI', 13, 'bold'),
+
+    'body': ('Segoe UI', 10),
+    'body_bold': ('Segoe UI', 10, 'bold'),
+
+    'small': ('Segoe UI', 9),
+    'small_bold': ('Segoe UI', 9, 'bold'),
+
+    'button': ('Segoe UI', 10, 'bold'),
+    'badge': ('Segoe UI', 8, 'bold'),
+}
+
 
 STATUS_COLORS = {
-
     'stored': '#2EB872',
     'available': '#2EB872',
-
     'lent': '#FF7A00',
-
     'borrowed': '#00A3FF',
-
     'lost': '#E53935',
     'overdue': '#E53935',
 }
 
 
-# ========================================================
-# Responsive Breakpoints
-# ========================================================
-
 BREAKPOINTS = {
-
     'xs': 0,
     'sm': 700,
     'md': 900,
     'lg': 1100,
     'xl': 1400,
 }
-
  
