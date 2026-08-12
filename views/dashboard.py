@@ -3,7 +3,7 @@
 import tkinter as tk
 
 from theme import COLORS, FONTS
-from components import StatCard, ItemRow, RoundedButton
+from components import StatCard, ItemRow, RoundedButton, SearchBar
 from database import get_stats, get_all_items
 
 
@@ -16,6 +16,8 @@ class DashboardView(tk.Frame):
         )
 
         self.controller = controller
+        self.search_text = ''
+
         self._build()
 
     # ====================================================
@@ -146,6 +148,32 @@ class DashboardView(tk.Frame):
         )
 
         # ------------------------------------------------
+        # Search
+        # ------------------------------------------------
+
+        search_frame = tk.Frame(
+            content,
+            bg=COLORS['bg']
+        )
+
+        search_frame.pack(
+            fill='x',
+            padx=28,
+            pady=(0, 5)
+        )
+
+        self.search = SearchBar(
+            search_frame,
+            on_search=self._on_search,
+            placeholder='Search your items...'
+        )
+
+        self.search.pack(
+            fill='x',
+            expand=True
+        )
+
+        # ------------------------------------------------
         # Statistics
         # ------------------------------------------------
 
@@ -155,30 +183,30 @@ class DashboardView(tk.Frame):
         # Main sections
         # ------------------------------------------------
 
-        sections = tk.Frame(
+        self.sections = tk.Frame(
             content,
             bg=COLORS['bg']
         )
 
-        sections.pack(
+        self.sections.pack(
             fill='both',
             expand=True,
             padx=28,
             pady=(22, 30)
         )
 
-        sections.grid_columnconfigure(
+        self.sections.grid_columnconfigure(
             0,
             weight=3
         )
 
-        sections.grid_columnconfigure(
+        self.sections.grid_columnconfigure(
             1,
             weight=2
         )
 
-        self._build_recent_items(sections)
-        self._build_reminders(sections)
+        self._build_recent_items(self.sections)
+        self._build_reminders(self.sections)
 
     # ====================================================
     # STATISTICS
@@ -255,17 +283,27 @@ class DashboardView(tk.Frame):
     # ====================================================
     # RECENT ITEMS
     # ====================================================
+    
+    def _on_search(self, text):
+
+        self.search_text = text
+
+        if hasattr(self, 'recent_section'):
+            self.recent_section.destroy()
+
+        self._build_recent_items(self.sections)
+
 
     def _build_recent_items(self, parent):
 
-        section = tk.Frame(
+        self.recent_section = tk.Frame(
             parent,
             bg=COLORS['card'],
             highlightbackground=COLORS['border'],
             highlightthickness=1
         )
 
-        section.grid(
+        self.recent_section.grid(
             row=0,
             column=0,
             sticky='nsew',
@@ -273,7 +311,7 @@ class DashboardView(tk.Frame):
         )
 
         header = tk.Frame(
-            section,
+            self.recent_section,
             bg=COLORS['card']
         )
 
@@ -309,10 +347,13 @@ class DashboardView(tk.Frame):
             side='right'
         )
 
-        items = get_all_items(limit=5)
+        items = get_all_items(
+            search=getattr(self, 'search_text', ''),
+            limit=5
+        )
 
         list_frame = tk.Frame(
-            section,
+            self.recent_section,
             bg=COLORS['card']
         )
 
