@@ -118,6 +118,12 @@ class ItemDetailWindow(tk.Toplevel):
             side='right'
         )
 
+
+
+        from ui.context_menu import ItemContextMenu
+        self.context_menu = ItemContextMenu(self, self.controller, self.item)
+        self.bind("<Button-3>", self.context_menu.show)
+
         # ----------------------------------------------------
         # Scrollable content
         # ----------------------------------------------------
