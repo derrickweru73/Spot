@@ -251,7 +251,8 @@ class BorrowedView(tk.Frame):
             row = ItemRow(
                 self.list_frame,
                 item,
-                on_click=self.controller.open_detail
+                on_click=self.controller.open_detail,
+                controller=self.controller
             )
 
             row.pack(
