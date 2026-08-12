@@ -3,26 +3,22 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 
-from theme import (
-    COLORS,
-    FONTS,
-    BREAKPOINTS,
-    toggle_dark_mode
-)
-
+from theme import COLORS, FONTS, BREAKPOINTS, toggle_dark_mode, save_theme_preference
 from components import RoundedButton
-
-from database import (
-    delete_item,
-    export_to_csv,
-    get_stats
-)
+from database import soft_delete_item, export_to_csv, get_stats
+from ui.toast import ToastManager
+from utils.keyboard_shortcuts import bind_shortcuts
+from utils.backup import create_backup
+from utils.csv_handler import import_from_csv
+from utils.reports import open_report
+from ui.pin_lock import PinLockScreen
 
 from views.dashboard import DashboardView
 from views.stash_view import StashView
 from views.lent_view import LentView
 from views.borrowed_view import BorrowedView
-
+from views.trash_view import TrashView
+from views.search_results import SearchResultsView
 
 class SpotApp(tk.Tk):
 
@@ -40,8 +36,12 @@ class SpotApp(tk.Tk):
             bg=COLORS['bg']
         )
 
+        self.toast = ToastManager(self)
+
         self._build_layout()
-        self.show_view("dashboard")
+        bind_shortcuts(self, self)
+
+        PinLockScreen(self, on_unlock=lambda: self.show_view("dashboard"))
 
     # ====================================================
     # MAIN LAYOUT
@@ -164,6 +164,21 @@ class SpotApp(tk.Tk):
             "↙",
             "Borrowed",
             "borrowed"
+        )
+
+
+        self._create_nav_button(
+            nav_frame,
+            "⚲",
+            "Advanced Search",
+            "search"
+        )
+
+        self._create_nav_button(
+            nav_frame,
+            "🗑",
+            "Trash",
+            "trash"
         )
 
         # ------------------------------------------------
@@ -382,7 +397,9 @@ class SpotApp(tk.Tk):
             'dashboard': DashboardView,
             'stash': StashView,
             'lent': LentView,
-            'borrowed': BorrowedView
+            'borrowed': BorrowedView,
+            'trash': TrashView,
+            'search': SearchResultsView,
         }
 
         view_class = view_classes.get(
@@ -444,11 +461,13 @@ class SpotApp(tk.Tk):
             self.current_view.destroy()
 
         view_classes = {
-            'dashboard': DashboardView,
-            'stash': StashView,
-            'lent': LentView,
-            'borrowed': BorrowedView
-        }
+                'dashboard': DashboardView,
+                'stash': StashView,
+                'lent': LentView,
+                'borrowed': BorrowedView,
+                'trash': TrashView,
+                'search': SearchResultsView,
+            }
 
         view_class = view_classes.get(
             self.current_view_name,
@@ -551,19 +570,14 @@ class SpotApp(tk.Tk):
         self,
         item_id
     ):
-
         answer = messagebox.askyesno(
             "Delete Item",
-            "Are you sure you want to delete this item?"
+            "Move this item to trash?"
         )
-
         if not answer:
             return
-
-        delete_item(
-            item_id
-        )
-
+        soft_delete_item(item_id)
+        self.toast.show("Item moved to trash", "warning")
         self.refresh_current_view()
 
     # ====================================================
@@ -571,36 +585,50 @@ class SpotApp(tk.Tk):
     # ====================================================
 
     def export_items(self):
-
         filepath = filedialog.asksaveasfilename(
             title="Export Inventory",
             defaultextension=".csv",
-            filetypes=[
-                ("CSV files", "*.csv"),
-                ("All files", "*.*")
-            ]
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
         )
-
         if not filepath:
             return
-
         try:
-
-            export_to_csv(
-                filepath
-            )
-
-            messagebox.showinfo(
-                "Export Complete",
-                "Inventory exported successfully."
-            )
-
+            export_to_csv(filepath)
+            self.toast.show("Inventory exported successfully", "success")
         except Exception as exc:
+            messagebox.showerror("Export Failed", f"Could not export:\n\n{exc}")
 
-            messagebox.showerror(
-                "Export Failed",
-                f"Could not export inventory:\n\n{exc}"
-            )
+
+    def import_items(self):
+        filepath = filedialog.askopenfilename(
+            title="Import CSV",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        )
+        if not filepath:
+            return
+        try:
+            result = import_from_csv(filepath)
+            msg = f"Imported {result['imported']} items"
+            if result['skipped']:
+                msg += f", skipped {result['skipped']}"
+            self.toast.show(msg, "success" if result['imported'] > 0 else "warning")
+            self.refresh_current_view()
+        except Exception as exc:
+            messagebox.showerror("Import Failed", str(exc))
+
+    def create_backup(self):
+        try:
+            create_backup()
+            self.toast.show("Backup created", "success")
+        except Exception as exc:
+            messagebox.showerror("Backup Failed", str(exc))
+
+    def print_report(self):
+        try:
+            open_report()
+            self.toast.show("Report opened in browser", "info")
+        except Exception as exc:
+            messagebox.showerror("Report Failed", str(exc))
 
     # ====================================================
     # RESPONSIVE SIDEBAR
