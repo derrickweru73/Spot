@@ -147,4 +147,32 @@ BREAKPOINTS = {
     'lg': 1100,
     'xl': 1400,
 }
+
+from config import CONFIG_FILE
+import os
+
+def load_theme_preference():
+    global DARK_MODE, COLORS
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                for line in f:
+                    if line.startswith('dark_mode='):
+                        is_dark = line.strip().split('=')[1].lower() == 'true'
+                        set_dark_mode(is_dark)
+                        return
+        except Exception:
+            pass
+
+def save_theme_preference():
+    lines = []
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            lines = f.readlines()
+    lines = [l for l in lines if not l.startswith('dark_mode=')]
+    lines.append(f'dark_mode={DARK_MODE}\n')
+    with open(CONFIG_FILE, 'w') as f:
+        f.writelines(lines)
+
+load_theme_preference()
  
