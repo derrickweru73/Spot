@@ -546,6 +546,7 @@ class ItemRow(tk.Frame):
         parent,
         item,
         on_click=None,
+        controller=None,
         **kwargs
     ):
 
@@ -561,6 +562,7 @@ class ItemRow(tk.Frame):
 
         self.item = item
         self.on_click = on_click
+        self.controller = controller
 
         # ----------------------------------------------------
         # Photo / icon
@@ -752,6 +754,13 @@ class ItemRow(tk.Frame):
                 child,
                 command
             )
+
+        if self.controller:
+            from ui.context_menu import ItemContextMenu
+            self.context_menu = ItemContextMenu(self, self.controller, item)
+            self.bind("<Button-3>", self.context_menu.show)
+            for widget in [self, self.img_label, info, right]:
+                widget.bind("<Button-3>", self.context_menu.show)
 
     # ========================================================
     # Hover
