@@ -178,6 +178,26 @@ class DashboardView(tk.Frame):
             padx=(0, 8)
         )
 
+
+        tk.Button(
+            actions,
+            text='📊',
+            command=self._show_charts,
+            bg=COLORS['card'],
+            fg=COLORS['text'],
+            activebackground=COLORS['card_hover'],
+            activeforeground=COLORS['text'],
+            relief='flat',
+            borderwidth=0,
+            cursor='hand2',
+            font=('Segoe UI', 14),
+            width=3,
+            height=1
+        ).pack(
+            side='left',
+            padx=(0, 8)
+        )
+
         # Add Item
         RoundedButton(
             actions,
@@ -806,3 +826,41 @@ class DashboardView(tk.Frame):
             widget.destroy()
 
         self._build_content()
+
+    def _show_charts(self):
+        from ui.charts import BarChart, PieChart
+        from database import get_stats
+
+        window = tk.Toplevel(self)
+        window.title("Spot - Statistics")
+        window.geometry("700x500")
+        window.configure(bg=COLORS["bg"])
+        window.transient(self)
+        window.grab_set()
+
+        stats = get_stats()
+
+        tk.Label(window, text="Statistics", bg=COLORS["bg"],
+                 fg=COLORS["text"], font=FONTS["title"]).pack(
+                     anchor="w", padx=24, pady=(20, 10))
+
+        charts = tk.Frame(window, bg=COLORS["bg"])
+        charts.pack(fill="both", expand=True, padx=24, pady=10)
+
+        if stats.get("categories"):
+            bar = BarChart(charts, stats["categories"], "Items by Category",
+                           width=380, height=220)
+            bar.pack(side="left", fill="both", expand=True)
+
+        status_data = {
+            "Available": stats["stored"],
+            "Lent": stats["lent"],
+            "Borrowed": stats["borrowed"],
+            "Lost": stats["lost"]
+        }
+        status_data = {k: v for k, v in status_data.items() if v > 0}
+
+        if status_data:
+            pie = PieChart(charts, status_data, "By Status",
+                           width=240, height=220)
+            pie.pack(side="right", fill="both", expand=True)
