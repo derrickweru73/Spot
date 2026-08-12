@@ -1,613 +1,182 @@
-"""Item detail window for Spot."""
+"""Item detail view."""
 
 import tkinter as tk
-from tkinter import messagebox
-
 from theme import COLORS, FONTS
-from components import RoundedButton, StatusBadge
 from database import get_item, get_history
 
 
 class ItemDetailWindow(tk.Toplevel):
-
     def __init__(self, parent, controller, item_id):
         super().__init__(parent)
-
         self.controller = controller
         self.item_id = item_id
-
-        self.item = get_item(item_id)
-
-        if not self.item:
-            messagebox.showerror(
-                "Item Not Found",
-                "This item could not be found.",
-                parent=parent
-            )
-            self.destroy()
-            return
-
-        self.title(
-            f"Spot - {self.item['name']}"
-        )
-
-        self.geometry(
-            "560x650"
-        )
-
-        self.minsize(
-            420,
-            520
-        )
-
-        self.configure(
-            bg=COLORS['bg']
-        )
-
+        self.title('Spot - Item Details')
+        self.geometry('520x600')
+        self.configure(bg=COLORS['bg'])
+        self.minsize(400, 450)
         self.transient(parent)
         self.grab_set()
+
+        self.item = get_item(item_id)
+        if not self.item:
+            self.destroy()
+            return
 
         self._build()
         self.center_window()
 
-    # ========================================================
-    # Center
-    # ========================================================
-
     def center_window(self):
-
         self.update_idletasks()
-
-        width = 560
-        height = 650
-
-        x = (
-            self.winfo_screenwidth() // 2
-            - width // 2
-        )
-
-        y = (
-            self.winfo_screenheight() // 2
-            - height // 2
-        )
-
-        self.geometry(
-            f"{width}x{height}+{x}+{y}"
-        )
-
-    # ========================================================
-    # Build
-    # ========================================================
+        x = self.winfo_screenwidth() // 2 - 260
+        y = self.winfo_screenheight() // 2 - 300
+        self.geometry(f'520x600+{x}+{y}')
 
     def _build(self):
+        canvas = tk.Canvas(self, bg=COLORS['bg'], highlightthickness=0)
+        scrollbar = tk.Scrollbar(self, orient='vertical', command=canvas.yview)
+        content = tk.Frame(canvas, bg=COLORS['bg'])
 
-        # ----------------------------------------------------
-        # Header
-        # ----------------------------------------------------
+        content.bind('<Configure>',
+                     lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
 
-        header = tk.Frame(
-            self,
-            bg=COLORS['bg']
-        )
+        window = canvas.create_window((0, 0), window=content, anchor='nw', width=490)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side='left', fill='both', expand=True, padx=16, pady=16)
+        scrollbar.pack(side='right', fill='y')
 
-        header.pack(
-            fill='x',
-            padx=24,
-            pady=(24, 14)
-        )
+        canvas.bind('<Configure>',
+                    lambda e: canvas.itemconfig(window, width=max(e.width, 450)))
+        canvas.bind_all('<MouseWheel>',
+                        lambda e: canvas.yview_scroll(int(-e.delta / 120), 'units'))
 
-        tk.Label(
-            header,
-            text="Item Details",
-            bg=COLORS['bg'],
-            fg=COLORS['text'],
-            font=FONTS['title']
-        ).pack(
-            side='left'
-        )
+        close_btn = tk.Label(self, text='✕', bg=COLORS['bg'],
+                             fg=COLORS['text_muted'], font=('Segoe UI', 16),
+                             cursor='hand2')
+        close_btn.place(relx=1.0, x=-30, y=10, anchor='ne')
+        close_btn.bind('<Button-1>', lambda e: self.destroy())
 
-        RoundedButton(
-            header,
-            text="✕",
-            command=self.destroy,
-            bg=COLORS['text_muted'],
-            width=38,
-            height=32,
-            radius=8
-        ).pack(
-            side='right'
-        )
+        photo_frame = tk.Frame(content, bg=COLORS['card'],
+                               highlightbackground=COLORS['border'],
+                               highlightthickness=1)
+        photo_frame.pack(fill='x', pady=(0, 16))
 
+        self.photo_label = tk.Label(photo_frame, bg=COLORS['card'],
+                                    text='📷', font=('Segoe UI', 48))
+        self.photo_label.pack(pady=30)
+        self._detail_photo = None
 
+        photo_path = self.item.get('photo_path')
+        if photo_path:
+            try:
+                from PIL import Image, ImageTk
+                img = Image.open(photo_path)
+                img.thumbnail((300, 300))
+                self._detail_photo = ImageTk.PhotoImage(img)
+                self.photo_label.config(image=self._detail_photo, text='')
+            except Exception:
+                self.photo_label.config(
+                    text='⚠ Image failed to load',
+                    font=('Segoe UI', 12)
+                )
 
-        from ui.context_menu import ItemContextMenu
-        self.context_menu = ItemContextMenu(self, self.controller, self.item)
-        self.bind("<Button-3>", self.context_menu.show)
+        tk.Label(content, text=self.item['name'], bg=COLORS['bg'],
+                 fg=COLORS['text'], font=('Segoe UI', 24, 'bold')).pack(anchor='w')
 
-        # ----------------------------------------------------
-        # Scrollable content
-        # ----------------------------------------------------
+        status = self.item.get('status', 'stored')
+        status_text = 'Available' if status == 'stored' else status.title()
+        status_color = {
+            'stored': '#2EB872',
+            'lent': '#FF7A00',
+            'borrowed': '#00A3FF',
+            'lost': '#E53935'
+        }.get(status, '#A5A8B2')
 
-        canvas = tk.Canvas(
-            self,
-            bg=COLORS['bg'],
-            highlightthickness=0
-        )
+        tk.Label(content, text=status_text, bg=status_color, fg='white',
+                 font=FONTS['small_bold'], padx=12, pady=4).pack(
+                     anchor='w', pady=(8, 16))
 
-        scrollbar = tk.Scrollbar(
-            self,
-            orient='vertical',
-            command=canvas.yview
-        )
+        details = tk.Frame(content, bg=COLORS['bg'])
+        details.pack(fill='x', pady=(0, 16))
 
-        content = tk.Frame(
-            canvas,
-            bg=COLORS['bg']
-        )
+        fields = [
+            ('Category', self.item.get('category', 'General')),
+            ('Location', f"{self.item.get('room', '')} → "
+                         f"{self.item.get('container', '')}".rstrip(' →')),
+            ('Person', self.item.get('person', '-')),
+            ('Due Date', self.item.get('due_date', '-')),
+            ('Added', self.item.get('date_added', '-')),
+            ('Tags', self.item.get('tags', '-')),
+        ]
 
-        window_id = canvas.create_window(
-            (0, 0),
-            window=content,
-            anchor='nw'
-        )
-
-        content.bind(
-            '<Configure>',
-            lambda event:
-            canvas.configure(
-                scrollregion=canvas.bbox('all')
-            )
-        )
-
-        canvas.bind(
-            '<Configure>',
-            lambda event:
-            canvas.itemconfig(
-                window_id,
-                width=event.width
-            )
-        )
-
-        canvas.configure(
-            yscrollcommand=scrollbar.set
-        )
-
-        canvas.pack(
-            side='left',
-            fill='both',
-            expand=True,
-            padx=(24, 5),
-            pady=(0, 20)
-        )
-
-        scrollbar.pack(
-            side='right',
-            fill='y',
-            pady=(0, 20)
-        )
-
-        # ----------------------------------------------------
-        # Main card
-        # ----------------------------------------------------
-
-        card = tk.Frame(
-            content,
-            bg=COLORS['card'],
-            highlightbackground=COLORS['border'],
-            highlightthickness=1
-        )
-
-        card.pack(
-            fill='x',
-            pady=(0, 12)
-        )
-
-        # ----------------------------------------------------
-        # Photo
-        # ----------------------------------------------------
-
-        photo_frame = tk.Frame(
-            card,
-            bg=COLORS['card']
-        )
-
-        photo_frame.pack(
-            fill='x',
-            padx=20,
-            pady=(20, 12)
-        )
-
-        self._display_photo(
-            photo_frame
-        )
-
-        # ----------------------------------------------------
-        # Name
-        # ----------------------------------------------------
-
-        tk.Label(
-            card,
-            text=self.item['name'],
-            bg=COLORS['card'],
-            fg=COLORS['text'],
-            font=('Segoe UI', 20, 'bold')
-        ).pack(
-            anchor='w',
-            padx=20
-        )
-
-        # ----------------------------------------------------
-        # Status
-        # ----------------------------------------------------
-
-        status = self.item.get(
-            'status',
-            'stored'
-        )
-
-        status_text = (
-            'Available'
-            if status == 'stored'
-            else status.title()
-        )
-
-        StatusBadge(
-            card,
-            status_text,
-            width=90,
-            height=26
-        ).pack(
-            anchor='w',
-            padx=20,
-            pady=(8, 18)
-        )
-
-        # ----------------------------------------------------
-        # Details
-        # ----------------------------------------------------
-
-        details = tk.Frame(
-            card,
-            bg=COLORS['card']
-        )
-
-        details.pack(
-            fill='x',
-            padx=20,
-            pady=(0, 15)
-        )
-
-        self._detail_row(
-            details,
-            "Category",
-            self.item.get(
-                'category',
-                'General'
-            )
-        )
-
-        location = self.item.get(
-            'room',
-            ''
-        )
-
-        if self.item.get('container'):
-            location += (
-                f" → "
-                f"{self.item['container']}"
-            )
-
-        self._detail_row(
-            details,
-            "Location",
-            location
-        )
-
-        if self.item.get('person'):
-
-            self._detail_row(
-                details,
-                "Person",
-                self.item['person']
-            )
-
-        if self.item.get('due_date'):
-
-            self._detail_row(
-                details,
-                "Due Date",
-                self.item['due_date']
-            )
-
-        if self.item.get('date_added'):
-
-            self._detail_row(
-                details,
-                "Added",
-                self.item['date_added']
-            )
-
-        if self.item.get('tags'):
-
-            self._detail_row(
-                details,
-                "Tags",
-                self.item['tags']
-            )
-
-        # ----------------------------------------------------
-        # Notes
-        # ----------------------------------------------------
+        for i, (label, value) in enumerate(fields):
+            tk.Label(details, text=label, bg=COLORS['bg'],
+                     fg=COLORS['text_muted'],
+                     font=FONTS['body_bold']).grid(
+                         row=i, column=0, sticky='nw', pady=6, padx=(0, 20))
+            tk.Label(details, text=value or '-', bg=COLORS['bg'],
+                     fg=COLORS['text'], font=FONTS['body']).grid(
+                         row=i, column=1, sticky='nw', pady=6)
 
         if self.item.get('notes'):
+            tk.Label(content, text='Notes', bg=COLORS['bg'],
+                     fg=COLORS['text'],
+                     font=FONTS['heading']).pack(anchor='w', pady=(8, 4))
+            tk.Label(content, text=self.item['notes'], bg=COLORS['card'],
+                     fg=COLORS['text'], font=FONTS['body'],
+                     wraplength=420, justify='left',
+                     padx=12, pady=10).pack(fill='x', pady=(0, 16))
 
-            tk.Label(
-                card,
-                text="Notes",
-                bg=COLORS['card'],
-                fg=COLORS['text'],
-                font=FONTS['body_bold']
-            ).pack(
-                anchor='w',
-                padx=20,
-                pady=(4, 4)
-            )
+        tk.Label(content, text='History', bg=COLORS['bg'],
+                 fg=COLORS['text'],
+                 font=FONTS['heading']).pack(anchor='w', pady=(8, 4))
 
-            tk.Label(
-                card,
-                text=self.item['notes'],
-                bg=COLORS['card'],
-                fg=COLORS['text_muted'],
-                font=FONTS['body'],
-                justify='left',
-                wraplength=450
-            ).pack(
-                anchor='w',
-                padx=20,
-                pady=(0, 18)
-            )
-
-        # ----------------------------------------------------
-        # Actions
-        # ----------------------------------------------------
-
-        actions = tk.Frame(
-            content,
-            bg=COLORS['bg']
-        )
-
-        actions.pack(
-            fill='x',
-            pady=(0, 12)
-        )
-
-        RoundedButton(
-            actions,
-            text="Edit Item",
-            command=self._edit,
-            bg=COLORS['primary'],
-            width=110,
-            height=36
-        ).pack(
-            side='left',
-            padx=(0, 6)
-        )
-
-        RoundedButton(
-            actions,
-            text="Delete",
-            command=self._delete,
-            bg=COLORS['danger'],
-            width=100,
-            height=36
-        ).pack(
-            side='left'
-        )
-
-        # ----------------------------------------------------
-        # History
-        # ----------------------------------------------------
-
-        history = get_history(
-            self.item_id,
-            limit=5
-        )
+        history = get_history(self.item_id)
 
         if history:
+            for h in history[:5]:
+                h_frame = tk.Frame(content, bg=COLORS['card'],
+                                   highlightbackground=COLORS['border'],
+                                   highlightthickness=1)
+                h_frame.pack(fill='x', pady=(0, 6))
 
-            history_card = tk.Frame(
-                content,
-                bg=COLORS['card'],
-                highlightbackground=COLORS['border'],
-                highlightthickness=1
-            )
+                old = h.get('old_location', '')
+                new = h.get('new_location', '')
+                changed = h.get('changed_at', '')
+                text = f"{old} → {new}" if old and new else (old or new or 'Updated')
 
-            history_card.pack(
-                fill='x'
-            )
+                tk.Label(h_frame, text=text, bg=COLORS['card'],
+                         fg=COLORS['text'],
+                         font=FONTS['small']).pack(
+                             anchor='w', padx=12, pady=8)
+                tk.Label(h_frame, text=changed, bg=COLORS['card'],
+                         fg=COLORS['text_muted'],
+                         font=FONTS['small']).pack(
+                             anchor='w', padx=12, pady=(0, 8))
+        else:
+            tk.Label(content, text='No history yet.', bg=COLORS['bg'],
+                     fg=COLORS['text_muted'],
+                     font=FONTS['body']).pack(pady=10)
 
-            tk.Label(
-                history_card,
-                text="Location History",
-                bg=COLORS['card'],
-                fg=COLORS['text'],
-                font=FONTS['body_bold']
-            ).pack(
-                anchor='w',
-                padx=20,
-                pady=(16, 10)
-            )
+        btn_frame = tk.Frame(content, bg=COLORS['bg'])
+        btn_frame.pack(fill='x', pady=(16, 0))
 
-            for record in history:
-
-                text = (
-                    f"{record['old_location']}  →  "
-                    f"{record['new_location']}"
-                )
-
-                tk.Label(
-                    history_card,
-                    text=text,
-                    bg=COLORS['card'],
-                    fg=COLORS['text_muted'],
-                    font=FONTS['small'],
-                    wraplength=450,
-                    justify='left'
-                ).pack(
-                    anchor='w',
-                    padx=20,
-                    pady=(0, 3)
-                )
-
-                tk.Label(
-                    history_card,
-                    text=record['changed_at'],
-                    bg=COLORS['card'],
-                    fg=COLORS['text_muted'],
-                    font=('Segoe UI', 8)
-                ).pack(
-                    anchor='w',
-                    padx=20,
-                    pady=(0, 9)
-                )
-
-    # ========================================================
-    # Detail Row
-    # ========================================================
-
-    def _detail_row(
-        self,
-        parent,
-        label,
-        value
-    ):
-
-        row = tk.Frame(
-            parent,
-            bg=COLORS['card']
-        )
-
-        row.pack(
-            fill='x',
-            pady=4
-        )
-
-        tk.Label(
-            row,
-            text=label,
-            bg=COLORS['card'],
-            fg=COLORS['text_muted'],
-            font=FONTS['small'],
-            width=12,
-            anchor='w'
-        ).pack(
-            side='left'
-        )
-
-        tk.Label(
-            row,
-            text=value or '-',
-            bg=COLORS['card'],
-            fg=COLORS['text'],
-            font=FONTS['body'],
-            anchor='w',
-            wraplength=360,
-            justify='left'
-        ).pack(
-            side='left',
-            fill='x',
-            expand=True
-        )
-
-    # ========================================================
-    # Photo
-    # ========================================================
-
-    def _display_photo(self, parent):
-
-        path = self.item.get(
-            'photo_path'
-        )
-
-        if not path:
-
-            tk.Label(
-                parent,
-                text="📷",
-                bg=COLORS['card'],
-                fg=COLORS['text_muted'],
-                font=('Segoe UI', 32)
-            ).pack()
-
-            return
-
-        try:
-
-            from PIL import Image, ImageTk
-
-            image = Image.open(path)
-
-            image.thumbnail(
-                (140, 140)
-            )
-
-            photo = ImageTk.PhotoImage(
-                image
-            )
-
-            label = tk.Label(
-                parent,
-                image=photo,
-                bg=COLORS['card']
-            )
-
-            label.image = photo
-
-            label.pack()
-
-        except Exception:
-
-            tk.Label(
-                parent,
-                text="📷",
-                bg=COLORS['card'],
-                fg=COLORS['text_muted'],
-                font=('Segoe UI', 32)
-            ).pack()
-
-    # ========================================================
-    # Edit
-    # ========================================================
+        from components import RoundedButton
+        RoundedButton(btn_frame, text='Edit Item', command=self._edit,
+                      bg=COLORS['primary'], width=100).pack(side='left', padx=4)
+        RoundedButton(btn_frame, text='Delete', command=self._delete,
+                      bg=COLORS['danger'], width=100).pack(side='left', padx=4)
 
     def _edit(self):
-
         from views.add_edit import AddEditWindow
-
+        AddEditWindow(self.controller, self.controller, item_id=self.item_id)
         self.destroy()
-
-        AddEditWindow(
-            self.controller,
-            self.controller,
-            item_id=self.item_id
-        )
-
-    # ========================================================
-    # Delete
-    # ========================================================
 
     def _delete(self):
-
-        answer = messagebox.askyesno(
-            "Delete Item",
-            f"Delete '{self.item['name']}'?",
-            parent=self
-        )
-
-        if not answer:
-            return
-
-        self.controller.delete_item(
-            self.item_id
-        )
-
-        self.destroy()
+        from tkinter import messagebox
+        if messagebox.askyesno('Delete Item', 'Move this item to trash?',
+                               parent=self):
+            from database import soft_delete_item
+            soft_delete_item(self.item_id)
+            self.controller.toast.show('Item moved to trash', 'warning')
+            self.controller.refresh_current_view()
+            self.destroy()
