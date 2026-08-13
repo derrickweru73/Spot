@@ -1,7 +1,6 @@
 """SQLite persistence layer for Spot."""
 
 import sqlite3
-import os
 from datetime import datetime
 
 from config import DB_PATH
@@ -177,10 +176,34 @@ def update_item(item_id: int, data: dict):
         ''', (item_id, old_loc, new_loc, now))
 
     if old_status != new_status:
+        if new_status == 'stored' and old_status in ('lent', 'borrowed'):
+            old_status_text = 'Lent Out' if old_status == 'lent' else 'Borrowed'
+
+            history_old = f"Returned: {old_status_text}"
+            history_new = "Status: Available"
+
+        elif new_status == 'stored' and old_status == 'lost':
+            history_old = "Found: Lost"
+            history_new = "Status: Available"
+
+        else:
+            history_old = f"Status: {old_status or 'unknown'}"
+            history_new = f"Status: {new_status}"
+
         c.execute('''
-            INSERT INTO history (item_id, old_location, new_location, changed_at)
+            INSERT INTO history (
+                item_id,
+                old_location,
+                new_location,
+                changed_at
+            )
             VALUES (?, ?, ?, ?)
-        ''', (item_id, f"Status: {old_status or 'unknown'}", f"Status: {new_status}", now))
+        ''', (
+            item_id,
+            history_old,
+            history_new,
+            now
+        ))
 
     conn.commit()
     conn.close()
