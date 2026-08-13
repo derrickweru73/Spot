@@ -161,14 +161,54 @@ class ItemDetailWindow(tk.Toplevel):
         btn_frame.pack(fill='x', pady=(16, 0))
 
         from components import RoundedButton
-        RoundedButton(btn_frame, text='Edit Item', command=self._edit,
-                      bg=COLORS['primary'], width=100).pack(side='left', padx=4)
-        RoundedButton(btn_frame, text='Delete', command=self._delete,
-                      bg=COLORS['danger'], width=100).pack(side='left', padx=4)
 
+        # Show Mark Returned only for lent/borrowed items
+        if status in ('lent', 'borrowed'):
+            RoundedButton(
+                btn_frame,
+                text='Mark Returned',
+                command=self._mark_returned,
+                bg=COLORS['success'],
+                width=120
+            ).pack(side='left', padx=4)
+
+        RoundedButton(
+            btn_frame,
+            text='Edit Item',
+            command=self._edit,
+            bg=COLORS['primary'],
+            width=100
+        ).pack(side='left', padx=4)
+
+        RoundedButton(
+            btn_frame,
+            text='Delete',
+            command=self._delete,
+            bg=COLORS['danger'],
+            width=100
+        ).pack(side='left', padx=4)
     def _edit(self):
         from views.add_edit import AddEditWindow
         AddEditWindow(self.controller, self.controller, item_id=self.item_id)
+        self.destroy()
+
+
+    def _mark_returned(self):
+        from database import update_item
+
+        data = dict(self.item)
+        data['status'] = 'stored'
+        data['person'] = ''
+        data['due_date'] = ''
+
+        update_item(self.item_id, data)
+
+        self.controller.toast.show(
+            'Item marked as returned',
+            'success'
+        )
+
+        self.controller.refresh_current_view()
         self.destroy()
 
     def _delete(self):
