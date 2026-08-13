@@ -79,11 +79,17 @@ class AddEditWindow(tk.Toplevel):
         fields = [
             ('Item Name *', 'name', 'entry'),
             ('Category', 'cat', 'combo',
-             ['General', 'Electronics', 'Clothes', 'Documents',
-              'Tools', 'Books', 'Kitchen', 'Sports', 'Seasonal']),
+            ['General', 'Electronics', 'Clothes', 'Documents',
+            'Tools', 'Books', 'Kitchen', 'Sports', 'Seasonal',
+            'Laundry', 'Gym Equipment', 'Jewelry', 'Baby Items',
+            'Camping', 'Other']),
+            
             ('Room / Location *', 'room', 'combo',
-             ['Bedroom', 'Living Room', 'Kitchen', 'Office',
-              'Storage', 'Garage', 'Bathroom', 'Car']),
+            ['Bedroom', 'Living Room', 'Kitchen', 'Office',
+            'Storage Room', 'Garage', 'Bathroom', 'Car',
+            'Laundry Room', 'Gym', 'Basement', 'Attic',
+            'Balcony', 'Garden', 'Shed', 'Workshop']),
+
             ('Container / Details', 'container', 'entry'),
             ('Person (Lent/Borrowed)', 'person', 'entry'),
             ('Due Date (YYYY-MM-DD HH:MM)', 'due', 'entry'),
@@ -116,7 +122,7 @@ class AddEditWindow(tk.Toplevel):
             else:
                 ttk.Combobox(
                     f, textvariable=var, values=field[3],
-                    state='readonly', font=FONTS['body']
+                    state='normal', font=FONTS['body']
                 ).pack(fill='x', ipady=4)
                 var.set(field[3][0])
 
