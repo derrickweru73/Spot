@@ -271,38 +271,30 @@ class DashboardView(tk.Frame):
 
     def _show_charts(self):
         from ui.charts import BarChart, PieChart
-        from database import get_stats
 
         window = tk.Toplevel(self)
         window.title("Spot - Statistics")
-        window.geometry("700x500")
+        window.geometry("600x420")
         window.configure(bg=COLORS["bg"])
-        window.transient(self)
-        window.grab_set()
 
-        stats = get_stats()
+        tk.Label(
+            window, text="Statistics",
+            bg=COLORS["bg"], fg=COLORS["text"],
+            font=FONTS["title"]
+        ).pack(pady=15)
 
-        tk.Label(window, text="Statistics", bg=COLORS["bg"],
-                 fg=COLORS["text"], font=FONTS["title"]).pack(
-                     anchor="w", padx=24, pady=(20, 10))
+        BarChart(
+            window,
+            {"General": 5, "Electronics": 3, "Clothes": 2},
+            "Items by Category",
+            width=280,
+            height=250
+        ).pack(side="left", padx=10)
 
-        charts = tk.Frame(window, bg=COLORS["bg"])
-        charts.pack(fill="both", expand=True, padx=24, pady=10)
-
-        if stats.get("categories"):
-            bar = BarChart(charts, stats["categories"], "Items by Category",
-                           width=380, height=220)
-            bar.pack(side="left", fill="both", expand=True)
-
-        status_data = {
-            "Available": stats["stored"],
-            "Lent": stats["lent"],
-            "Borrowed": stats["borrowed"],
-            "Lost": stats["lost"]
-        }
-        status_data = {k: v for k, v in status_data.items() if v > 0}
-
-        if status_data:
-            pie = PieChart(charts, status_data, "By Status",
-                           width=240, height=220)
-            pie.pack(side="right", fill="both", expand=True)
+        PieChart(
+            window,
+            {"Available": 5, "Lent": 3, "Lost": 2},
+            "Items by Status",
+            width=240,
+            height=250
+        ).pack(side="right", padx=10)
