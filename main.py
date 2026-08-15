@@ -174,12 +174,21 @@ class SpotApp(tk.Tk):
             "search"
         )
 
+        self._create_report_button(nav_frame)
+
         self._create_nav_button(
             nav_frame,
             "🗑",
             "Trash",
             "trash"
         )
+
+
+
+
+    # ====================================================
+    # NAVIGATION STYLING
+    # ====================================================
 
         # ------------------------------------------------
         # Bottom stats
@@ -314,6 +323,43 @@ class SpotApp(tk.Tk):
                 self._nav_hover(v, False)
             )
 
+
+
+    def _create_report_button(self, parent):
+
+            button = tk.Frame(
+                parent,
+                bg=COLORS['sidebar'],
+                height=42,
+                cursor='hand2'
+            )
+            button.pack(fill='x', pady=3)
+            button.pack_propagate(False)
+
+            icon = tk.Label(
+                button,
+                text="▤",
+                bg=COLORS['sidebar'],
+                fg=COLORS['text_muted'],
+                font=('Segoe UI', 12)
+            )
+            icon.pack(side='left', padx=(14, 10))
+
+            label = tk.Label(
+                button,
+                text="Reports",
+                bg=COLORS['sidebar'],
+                fg=COLORS['text_dark'],
+                font=FONTS['body_bold']
+            )
+            label.pack(side='left')
+
+            for widget in (button, icon, label):
+                widget.bind(
+                    '<Button-1>',
+                    lambda e: self.print_report()
+                )
+
     # ====================================================
     # NAVIGATION STYLING
     # ====================================================
@@ -438,7 +484,7 @@ class SpotApp(tk.Tk):
             bg=COLORS['bg']
         )
 
-        # Rebuild sidebar
+         
         self.sidebar.destroy()
 
         self.sidebar = tk.Frame(
